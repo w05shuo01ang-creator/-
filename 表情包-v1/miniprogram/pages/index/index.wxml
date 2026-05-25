@@ -1,0 +1,123 @@
+<view class="container">
+  <view class="header">
+    <view class="deco-blobs">
+      <view class="blob b1"></view>
+      <view class="blob b2"></view>
+      <view class="blob b3"></view>
+      <view class="blob b4"></view>
+    </view>
+    <view class="greeting">
+      <text class="greeting-sub">😊 今天想找点什么？</text>
+      <text class="greeting-main">表情宇宙</text>
+      <view class="greeting-line"></view>
+      <text class="greeting-desc">发现最有趣的表情包世界</text>
+    </view>
+    <!-- 搜索栏保持不变 -->
+<view class="search-bar">
+  <text class="search-icon"></text>
+  <input  class="search-input"
+  placeholder="搜索你喜欢的表情包..."
+  confirm-type="search"
+  bindconfirm="onSearch"
+  value="{{keyword}}"
+  bindinput="onInput" />
+  <!-- 可以加一个取消按钮，在搜索模式时显示 -->
+  <text wx:if="{{isSearching}}" class="cancel-btn" bindtap="cancelSearch">取消</text>
+</view>
+
+<!-- 根据是否搜索，显示不同内容 -->
+<block wx:if="{{isSearching}}">
+  <!-- 搜索结果列表 -->
+  <view class="search-results">
+    <block wx:for="{{searchResults}}" wx:key="_id">
+      <!-- 复用你已有的表情包卡片组件，绑定 onGoDetail 和 onLike -->
+      <view class="meme-item" bindtap="onGoDetail" data-id="{{item._id}}">
+        <!-- 显示图片、文字等 -->
+      </view>
+    </block>
+    <view wx:if="{{searchResults.length === 0 && !loading}}" class="empty">
+      没有找到相关表情包
+    </view>
+  </view>
+</block>
+
+<block wx:else>
+  <!-- 原有的排行榜、推荐等内容，完全保留 -->
+  ...
+</block>
+  </view>
+
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{false}}">
+    <view class="content-search">
+      <text class="cs-icon">🔍</text>
+      <input class="cs-input" placeholder="搜索表情包..." confirm-type="search" bindconfirm="onSearch" value="{{keyword}}" bindinput="onInput" />
+      <text class="cs-btn" bindtap="onSearch">搜索</text>
+    </view>
+
+    <view class="section" wx:if="{{recommends.length > 0}}">
+      <view class="section-head" bindtap="onRecHeaderTap">
+        <view class="section-dot rec-dot"></view>
+        <text class="title-text">✨ 推荐</text>
+        <text class="title-sub">· 为你精选</text>
+      </view>
+      <view class="recommend-grid">
+        <view class="rec-card" wx:for="{{recommends}}" wx:key="_id">
+          <image class="rec-img" src="{{item.displayUrl || item.url}}" mode="aspectFill" bindtap="onGoDetail" data-id="{{item._id}}" />
+          <view class="rec-like {{likedMap[item._id] ? 'liked' : ''}}" catchtap="onLike" data-item="{{item}}">
+            <text class="rec-like-icon">❤</text>
+            <text class="rec-like-num">{{item.totalLikes || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{rankings.length > 0}}">
+      <view class="section-head">
+        <view class="section-dot rank-dot"></view>
+        <text class="title-text">🏆 排行榜</text>
+        <text class="title-sub">· 热门标签 TOP3</text>
+      </view>
+      <view class="deco-divider">
+        <view class="divider-dot"></view>
+        <view class="divider-line"></view>
+        <view class="divider-dot"></view>
+        <view class="divider-line"></view>
+        <view class="divider-dot"></view>
+      </view>
+
+      <view class="rank-block" wx:for="{{rankings}}" wx:key="tag">
+        <view class="rank-header" bindtap="onRankTagTap" data-tag="{{item.tag}}">
+          <view class="rank-tag-row">
+            <text class="rank-tag">#{{item.tag}}</text>
+            <text class="rank-tag-likes">👍 {{item.totalLikes}}</text>
+          </view>
+        </view>
+        <scroll-view scroll-x class="rank-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="rank-list">
+            <view class="rank-card {{idx === 0 ? 'top1' : idx === 1 ? 'top2' : 'top3'}}"
+                  wx:for="{{item.topMemes}}" wx:for-item="m" wx:for-index="idx" wx:key="_id">
+              <view class="rank-badge">{{idx + 1}}</view>
+              <image class="rank-img" src="{{m.displayUrl || m.url}}" mode="aspectFill" bindtap="onGoDetail" data-id="{{m._id}}" />
+              <view class="rank-img-overlay">
+                <text class="rank-likes-sm">👍{{m.totalLikes || 0}}</text>
+              </view>
+              <view class="rank-like-btn {{likedMap[m._id] ? 'liked' : ''}}" catchtap="onLike" data-item="{{m}}">
+                <text>❤</text>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
+    <view class="footer-deco">
+      <text class="footer-text">— 已经到底了 —</text>
+    </view>
+
+    <view class="empty-state" wx:if="{{!loading && rankings.length === 0 && recommends.length === 0}}">
+      <text class="empty-icon">🌙</text>
+      <text class="empty-text">暂无内容</text>
+      <text class="empty-sub">快来上传第一张表情包吧</text>
+    </view>
+  </scroll-view>
+</view>

@@ -1,0 +1,71 @@
+<view class="container">
+  <view class="user-header">
+    <text class="user-name">我的表情</text>
+    <view class="upload-btn" bindtap="onShowUploadModal">+ 上传</view>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{currentTab === 'private' ? 'active' : ''}}" bindtap="onTabChange" data-tab="private">
+      私密
+    </view>
+    <view class="tab {{currentTab === 'public' ? 'active' : ''}}" bindtap="onTabChange" data-tab="public">
+      公开
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="meme-list">
+    <view class="meme-item" wx:for="{{filteredMemes}}" wx:key="_id">
+      <image class="meme-image" src="{{item.displayUrl || item.url}}" mode="aspectFill" show-menu-by-longpress bindtap="onPreview" data-url="{{item.displayUrl || item.url}}" />
+      <view class="meme-info">
+        <text class="meme-desc">{{item.prompt}}</text>
+        <view class="meme-status {{item.reviewStatus === 'approved' ? 'ok' : item.reviewStatus === 'pending' ? 'wait' : 'fail'}}" wx:if="{{currentTab === 'public'}}">
+          {{item.reviewStatus === 'approved' ? '已审核' : item.reviewStatus === 'pending' ? '待审核' : '已拒绝'}}
+        </view>
+        <view class="meme-actions">
+          <text class="action" bindtap="onSaveMeme" data-item="{{item}}">保存</text>
+          <text class="action publish" wx:if="{{currentTab === 'private'}}" bindtap="onPublishMeme" data-item="{{item}}">公开</text>
+          <text class="action danger" bindtap="onDeleteMeme" data-id="{{item._id}}">删除</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty-state" wx:if="{{filteredMemes.length === 0 && !loading}}">
+      <text>暂无表情包</text>
+    </view>
+  </scroll-view>
+
+  <view class="mask" wx:if="{{showUploadModal}}" bindtap="onHideUploadModal">
+    <view class="modal" catchtap="preventBubble">
+      <text class="modal-title">上传表情包</text>
+
+      <view class="preview-box" bindtap="onChooseImage">
+        <image wx:if="{{tempFilePath}}" class="preview-img" src="{{tempFilePath}}" mode="aspectFill" />
+        <view wx:else class="preview-empty">
+          <text class="plus">+</text>
+          <text>点击选择图片</text>
+        </view>
+      </view>
+
+      <view class="tag-section">
+        <view class="tag-header">
+          <text>标签</text>
+          <text class="tag-hint">最多5个</text>
+        </view>
+        <view class="tag-input-row">
+          <input class="tag-input" placeholder="输入标签" value="{{uploadTagInput}}" bindinput="onUploadTagInput" bindconfirm="onAddUploadTag" />
+          <text class="add-btn" bindtap="onAddUploadTag">添加</text>
+        </view>
+        <view class="tag-list">
+          <view class="tag" wx:for="{{uploadTags}}" wx:key="index">
+            <text>{{item}}</text>
+            <text class="tag-rm" bindtap="onRemoveUploadTag" data-index="{{index}}">×</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="modal-btns">
+        <button class="btn cancel" bindtap="onHideUploadModal">取消</button>
+        <button class="btn ok" bindtap="onUploadImage">上传</button>
+      </view>
+    </view>
+  </view>
+</view>

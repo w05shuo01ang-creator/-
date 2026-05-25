@@ -1,0 +1,27 @@
+<view class="container" wx:if="{{meme}}">
+  <view class="image-section" bindtap="onPreviewImage">
+    <image class="detail-image" src="{{imageUrl}}" mode="aspectFit" />
+    <view class="preview-hint">点击查看大图</view>
+  </view>
+
+  <view class="info-section">
+    <view class="meme-prompt">{{meme.prompt}}</view>
+
+    <view class="tags-section">
+      <view class="tags-title">标签</view>
+      <view class="tags-list">
+        <view class="tag-item" wx:for="{{meme.tags}}" wx:key="index" wx:for-item="tag">
+          <text class="tag-name">#{{tag}}</text>
+          <view class="tag-like {{tagLikedMap[meme._id + '_' + tag] ? 'liked' : ''}}" catchtap="onTagLike" data-tag="{{tag}}">
+            <text class="tag-like-heart">❤</text>
+            <text class="tag-like-count">{{meme.tagLikes ? meme.tagLikes[tag] || 0 : 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="empty" wx:else>
+  <text>加载中...</text>
+</view>

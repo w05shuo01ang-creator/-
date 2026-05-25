@@ -1,0 +1,58 @@
+<view class="container">
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索标签..." bindconfirm="onSearch" value="{{keyword}}" bindinput="onSearchInput" />
+  </view>
+
+  <scroll-view scroll-y class="content">
+    <view class="section">
+      <view class="section-title">
+        <text class="title-text">📂 分类</text>
+      </view>
+      <view class="cat-row">
+        <view class="cat-item {{currentCategory === item.name ? 'active' : ''}}" 
+              wx:for="{{categories}}" wx:key="index"
+              bindtap="onCategoryTap" data-cat="{{item.name}}">
+          <text class="cat-icon">{{item.icon}}</text>
+          <text class="cat-name">{{item.name}}</text>
+        </view>
+        <view class="cat-item hot-card {{showHotRanking ? 'active' : ''}}" bindtap="onHotCardTap">
+          <text class="cat-icon">🔥</text>
+          <text class="cat-name">最热</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">
+        <text class="title-text">{{showHotRanking ? '🔥 最热排行' : (currentCategory || '推荐')}}</text>
+      </view>
+
+      <view class="rank-list" wx:if="{{showHotRanking && hotRanking.length > 0}}">
+        <view class="rank-item" wx:for="{{hotRanking}}" wx:key="_id">
+          <view class="rank-num {{index < 3 ? 'top' + (index + 1) : ''}}">{{index + 1}}</view>
+          <image class="rank-img" src="{{item.displayUrl || item.url}}" mode="aspectFill" bindtap="onGoDetail" data-id="{{item._id}}" />
+          <view class="rank-info">
+            <text class="rank-desc">{{item.prompt}}</text>
+            <text class="rank-likes">👍 {{item.totalLikes || 0}}</text>
+          </view>
+          <view class="rank-item-like {{likedMap[item._id] ? 'liked' : ''}}" catchtap="onLike" data-item="{{item}}">
+            <text>❤</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="meme-grid" wx:elif="{{!showHotRanking && memes.length > 0}}">
+        <view class="meme-item" wx:for="{{memes}}" wx:key="_id">
+          <image class="meme-image" src="{{item.displayUrl || item.url}}" mode="aspectFill" bindtap="onGoDetail" data-id="{{item._id}}" />
+          <view class="meme-like {{likedMap[item._id] ? 'liked' : ''}}" catchtap="onLike" data-item="{{item}}">
+            <text class="meme-like-icon">❤</text>
+            <text class="meme-like-num">{{item.totalLikes || 0}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="empty-state" wx:else>
+        <text>{{loading ? '加载中...' : (showHotRanking ? '暂无排行数据' : '该分类暂无内容')}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

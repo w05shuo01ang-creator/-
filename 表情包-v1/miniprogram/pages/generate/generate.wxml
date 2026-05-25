@@ -1,0 +1,73 @@
+<view class="container">
+  <view class="quota-bar">
+    <text class="quota-text">剩余次数：{{quota.remaining}} / {{quota.total}}</text>
+    <view class="recharge-btn" bindtap="showRecharge">充值</view>
+  </view>
+
+  <view class="input-section">
+    <textarea class="prompt-input" placeholder="描述你想要的表情包..." maxlength="100" value="{{prompt}}" bindinput="onInput" />
+    <text class="char-count">{{prompt.length}}/100</text>
+  </view>
+
+  <view class="quick-prompts">
+    <view class="prompt-item" wx:for="{{quickPrompts}}" wx:key="index" bindtap="onQuickTap" data-prompt="{{item}}">
+      {{item}}
+    </view>
+  </view>
+
+  <button class="generate-btn" bindtap="onGenerate" loading="{{generating}}" disabled="{{!prompt || generating}}">
+    {{generating ? '生成中...' : '生成表情包'}}
+  </button>
+
+  <view class="result-section" wx:if="{{result}}">
+    <image class="result-image" src="{{result.url}}" mode="aspectFit" show-menu-by-longpress />
+    
+    <view class="tags-section">
+      <view class="tags-header">
+        <text class="tags-title">添加标签</text>
+        <text class="tags-hint">最多5个标签</text>
+      </view>
+      <view class="tags-input-row">
+        <input class="tag-input" placeholder="输入标签" value="{{tagInput}}" bindinput="onTagInput" bindconfirm="onAddTag" />
+        <view class="add-tag-btn" bindtap="onAddTag">添加</view>
+      </view>
+      <view class="tags-list">
+        <view class="tag-item" wx:for="{{tags}}" wx:key="index">
+          <text>{{item}}</text>
+          <text class="remove-btn" bindtap="onRemoveTag" data-index="{{index}}">×</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="action-btns">
+      <button class="action-btn save-btn" bindtap="onSave">保存到相册</button>
+      <button class="action-btn share-btn" bindtap="onPublish" disabled="{{publishing}}">
+        {{publishing ? '发布中...' : '发布到广场'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="recharge-modal" wx:if="{{showRechargeModal}}" bindtap="hideRecharge">
+    <view class="recharge-content" catchtap="preventBubble">
+      <text class="recharge-title">选择充值套餐</text>
+      <view class="package-list">
+        <view class="package-item {{selectedPackage === '10' ? 'selected' : ''}}" bindtap="onSelectPackage" data-package="10">
+          <text class="package-count">10次</text>
+          <text class="package-price">免费</text>
+        </view>
+        <view class="package-item {{selectedPackage === '50' ? 'selected' : ''}}" bindtap="onSelectPackage" data-package="50">
+          <text class="package-count">50次</text>
+          <text class="package-price">¥45</text>
+        </view>
+        <view class="package-item {{selectedPackage === '100' ? 'selected' : ''}}" bindtap="onSelectPackage" data-package="100">
+          <text class="package-count">100次</text>
+          <text class="package-price">¥80</text>
+        </view>
+      </view>
+      <view class="recharge-btns">
+        <button class="btn cancel" bindtap="hideRecharge">取消</button>
+        <button class="btn confirm" bindtap="onRecharge">确认</button>
+      </view>
+    </view>
+  </view>
+</view>

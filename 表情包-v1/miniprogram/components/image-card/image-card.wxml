@@ -1,0 +1,27 @@
+<view class="card" bindtap="onTap">
+  <image
+    class="card-image"
+    src="{{image.displayUrl || image.url}}"
+    mode="widthFix"
+    lazy-load
+  ></image>
+  <view class="card-info">
+    <view class="card-tags">
+      <text
+        class="card-tag"
+        wx:for="{{image.tags}}"
+        wx:for-item="tag"
+        wx:key="tag"
+      >{{tag.tag}}</text>
+    </view>
+    <view class="card-footer">
+      <view class="card-likes">
+        <text class="like-icon">❤️</text>
+        <text class="like-total">{{totalLikes}}</text>
+      </view>
+      <view class="card-match" wx:if="{{image.matchRate !== undefined}}">
+        <text class="match-text">匹配 {{image.matchRate}}%</text>
+      </view>
+    </view>
+  </view>
+</view>

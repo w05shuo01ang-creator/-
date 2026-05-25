@@ -1,0 +1,72 @@
+.card {
+  background-color: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s;
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card-image {
+  width: 100%;
+  display: block;
+  background-color: #f0f0f0;
+}
+
+.card-info {
+  padding: 16rpx;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  margin-bottom: 12rpx;
+}
+
+.card-tag {
+  font-size: 22rpx;
+  color: #4A90D9;
+  background-color: #E8F0FE;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  max-width: 120rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-likes {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.like-icon {
+  font-size: 22rpx;
+}
+
+.like-total {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.card-match {
+  background-color: #E8F5E9;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.match-text {
+  font-size: 20rpx;
+  color: #27ae60;
+}

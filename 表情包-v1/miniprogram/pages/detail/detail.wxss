@@ -1,0 +1,112 @@
+.container {
+  min-height: 100vh;
+  background: #1a1a1a;
+}
+
+.image-section {
+  position: relative;
+  width: 100%;
+  height: 65vh;
+  background: #0d0d0d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-image {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-hint {
+  position: absolute;
+  bottom: 20rpx;
+  right: 24rpx;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.6);
+  font-size: 22rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 20rpx;
+}
+
+.info-section {
+  padding: 30rpx 28rpx;
+}
+
+.meme-prompt {
+  font-size: 30rpx;
+  color: #e0e0e0;
+  margin-bottom: 32rpx;
+  line-height: 1.6;
+}
+
+.tags-section {
+  margin-top: 10rpx;
+}
+
+.tags-title {
+  font-size: 26rpx;
+  color: #888;
+  margin-bottom: 20rpx;
+}
+
+.tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2a2a2a;
+  border-radius: 18rpx;
+  padding: 22rpx 24rpx;
+}
+
+.tag-name {
+  font-size: 30rpx;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.tag-like {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: rgba(255,255,255,0.06);
+  border-radius: 24rpx;
+  padding: 10rpx 22rpx;
+}
+
+.tag-like-heart {
+  font-size: 26rpx;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.tag-like.liked .tag-like-heart {
+  color: #ff3b5c;
+}
+
+.tag-like-count {
+  font-size: 26rpx;
+  color: #888;
+  font-weight: 700;
+  min-width: 36rpx;
+  text-align: center;
+}
+
+.tag-like.liked .tag-like-count {
+  color: #ff3b5c;
+}
+
+.empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: #666;
+  font-size: 28rpx;
+}
