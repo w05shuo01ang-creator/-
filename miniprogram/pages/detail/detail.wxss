@@ -54,17 +54,38 @@
 .main-like {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   gap: 8rpx;
-  min-width: 96rpx;
+  width: 124rpx;
+  height: 64rpx;
+  border: 1rpx solid #dfe4ea;
+  border-radius: 7rpx;
+  background: #f7f8fa;
   color: #59636f;
+  font-size: 24rpx;
+  box-sizing: border-box;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 
 .heart {
-  font-size: 42rpx;
-  line-height: 1;
+  display: block;
+  width: 34rpx;
+  height: 34rpx;
+  color: #a6afb9;
+  font-size: 32rpx;
+  line-height: 34rpx;
+  text-align: center;
+  transition: color 150ms ease;
 }
 
-.liked { color: #f04458; }
+.main-like.liked {
+  border-color: #ffd2d8;
+  background: #fff1f3;
+  color: #f04458;
+}
+
+.main-like.liked .heart { color: #f04458; }
 
 .divider {
   height: 1rpx;
@@ -98,9 +119,36 @@
 
 .tag-like {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   gap: 5rpx;
+  width: 88rpx;
+  height: 42rpx;
+  border-radius: 5rpx;
+  background: #ffffff;
   color: #77808c;
+  font-size: 22rpx;
+  box-sizing: border-box;
+  transition: color 150ms ease, background-color 150ms ease;
 }
+
+.tag-heart {
+  display: block;
+  width: 26rpx;
+  height: 26rpx;
+  color: #a6afb9;
+  line-height: 26rpx;
+  text-align: center;
+  transition: color 150ms ease;
+}
+
+.tag-like.liked {
+  background: #fff1f3;
+  color: #f04458;
+}
+
+.tag-like.liked .tag-heart { color: #f04458; }
 
 .save-button { margin-top: 40rpx; }
 

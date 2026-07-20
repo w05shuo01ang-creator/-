@@ -1,5 +1,5 @@
 {
-  "name": "memedock-meme-api",
+  "name": "memecraft-meme-api",
   "version": "1.0.0",
   "private": true,
   "main": "index.js",
@@ -7,4 +7,3 @@
     "wx-server-sdk": "~2.6.3"
   }
 }
-

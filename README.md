@@ -1,4 +1,4 @@
-# MemeDock 表情舱
+# MemeCraft 表情工坊
 
 一个可以直接部署到微信云开发的表情包收藏与分享小程序 MVP。
 
@@ -45,7 +45,7 @@ MVP 采用人工审核：用户申请公开后记录变为 `pending`，管理员
 - 将 `project.config.json` 中的 `appid` 替换为自己的 AppID，或继续保留测试号配置
 - 上线前完成隐私保护指引、用户内容协议与投诉入口
 
-安全边界见 [SECURITY.md](SECURITY.md)，规模化演进建议见 [docs/ROADMAP.md](docs/ROADMAP.md)。
+安全边界见 [SECURITY.md](SECURITY.md)，内容审核方案见 [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md)，规模化演进建议见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
 ## License
 

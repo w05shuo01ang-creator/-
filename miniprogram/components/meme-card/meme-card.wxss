@@ -66,17 +66,37 @@
 .like {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   gap: 6rpx;
-  min-width: 66rpx;
+  width: 104rpx;
+  height: 48rpx;
+  border: 1rpx solid transparent;
+  border-radius: 6rpx;
+  background: #f3f5f7;
   color: #77808c;
-  font-size: 23rpx;
+  font-size: 22rpx;
+  box-sizing: border-box;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 
 .heart {
-  font-size: 31rpx;
-  line-height: 1;
+  display: block;
+  width: 30rpx;
+  height: 30rpx;
+  color: #a6afb9;
+  font-size: 28rpx;
+  line-height: 30rpx;
+  text-align: center;
+  transition: color 150ms ease;
 }
 
 .is-liked {
+  border-color: #ffd2d8;
+  background: #fff1f3;
+  color: #f04458;
+}
+
+.is-liked .heart {
   color: #f04458;
 }

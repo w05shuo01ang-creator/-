@@ -9,19 +9,19 @@
       <text class="prompt">{{item.prompt || '未命名表情'}}</text>
       <view class="summary">
         <text class="date">{{item.createdAtText}}</text>
-        <view class="main-like {{liked ? 'liked' : ''}}" bindtap="toggleLike">
-          <text class="heart">{{liked ? '♥' : '♡'}}</text>
+        <view class="main-like {{liked ? 'liked' : ''}}" bindtap="toggleLike" aria-role="button" aria-label="{{liked ? '取消点赞' : '点赞'}}">
+          <text class="heart">♥</text>
           <text>{{item.totalLikes || 0}}</text>
         </view>
       </view>
 
       <view class="divider"></view>
-      <text class="tag-title">这个表情像什么？</text>
+      <text class="tag-title">什么标签最符合？</text>
       <view class="tags">
         <view class="tag" wx:for="{{tagItems}}" wx:key="name" wx:for-item="tagItem">
           <text>#{{tagItem.name}}</text>
-          <view class="tag-like {{tagItem.liked ? 'liked' : ''}}" bindtap="toggleTag" data-tag="{{tagItem.name}}">
-            <text>{{tagItem.liked ? '♥' : '♡'}}</text>
+          <view class="tag-like {{tagItem.liked ? 'liked' : ''}}" bindtap="toggleTag" data-tag="{{tagItem.name}}" aria-role="button" aria-label="{{tagItem.liked ? '取消标签点赞' : '标签点赞'}}">
+            <text class="tag-heart">♥</text>
             <text>{{tagItem.count}}</text>
           </view>
         </view>

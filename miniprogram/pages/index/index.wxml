@@ -2,10 +2,10 @@
   <view class="hero">
     <view class="brand-row">
       <view>
-        <text class="brand">MemeDock</text>
+        <text class="brand">MemeCraft</text>
         <text class="tagline">今天，用一张图把话说完</text>
       </view>
-      <view class="brand-mark">MD</view>
+      <view class="brand-mark">MC</view>
     </view>
 
     <view class="search">
@@ -61,4 +61,3 @@
 
   <view class="loading" wx:if="{{loading}}">正在连接表情舱...</view>
 </view>
-

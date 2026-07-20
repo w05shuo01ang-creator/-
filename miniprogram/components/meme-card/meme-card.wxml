@@ -9,11 +9,10 @@
     <text class="prompt">{{item.prompt || '未命名表情'}}</text>
     <view class="meta">
       <text class="tag">#{{item.tags[0] || '表情包'}}</text>
-      <view class="like {{liked ? 'is-liked' : ''}}" catchtap="like">
-        <text class="heart">{{liked ? '♥' : '♡'}}</text>
+      <view class="like {{liked ? 'is-liked' : ''}}" catchtap="like" aria-role="button" aria-label="{{liked ? '取消点赞' : '点赞'}}">
+        <text class="heart">♥</text>
         <text>{{item.totalLikes || 0}}</text>
       </view>
     </view>
   </view>
 </view>
-

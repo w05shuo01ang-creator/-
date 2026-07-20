@@ -1,10 +1,10 @@
 {
-  "description": "MemeDock 表情包分享小程序",
+  "description": "MemeCraft 表情包分享小程序",
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
   "compileType": "miniprogram",
   "appid": "wx1a788af8dec7f8d2",
-  "projectname": "memedock-miniprogram",
+  "projectname": "memecraft-miniprogram",
   "libVersion": "3.15.2",
   "setting": {
     "es6": true,
