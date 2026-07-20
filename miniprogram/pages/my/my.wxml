@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="account-head">
+    <view>
+      <text class="head-title">我的表情</text>
+      <text class="head-sub">上传、审核和管理都在这里</text>
+    </view>
+    <button class="upload-button" bindtap="showUpload">＋ 上传</button>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{currentTab === 'private' ? 'active' : ''}}" data-tab="private" bindtap="changeTab">私密</view>
+    <view class="tab {{currentTab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="changeTab">审核</view>
+    <view class="tab {{currentTab === 'public' ? 'active' : ''}}" data-tab="public" bindtap="changeTab">已公开</view>
+  </view>
+
+  <view class="mine-list" wx:if="{{filtered.length}}">
+    <view class="mine-item" wx:for="{{filtered}}" wx:key="_id">
+      <image class="thumb" src="{{item.displayUrl}}" mode="aspectFill" bindtap="preview" data-url="{{item.displayUrl}}" />
+      <view class="item-main" bindtap="openDetail" data-id="{{item._id}}">
+        <text class="item-prompt">{{item.prompt || '未命名表情'}}</text>
+        <text class="item-tags">{{item.tagsText}}</text>
+        <text class="item-status status-{{item.reviewStatus}}">{{item.reviewStatusText}}</text>
+      </view>
+      <view class="actions">
+        <text class="action" catchtap="save" data-item="{{item}}">保存</text>
+        <text class="action primary" wx:if="{{item.reviewStatus === 'private' || item.reviewStatus === 'rejected'}}" catchtap="publish" data-id="{{item._id}}">公开</text>
+        <text class="action danger" catchtap="remove" data-id="{{item._id}}">删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !filtered.length}}">
+    <text class="empty-title">这里还没有表情</text>
+    <text>{{currentTab === 'private' ? '上传后会默认保存在私密区' : currentTab === 'review' ? '待审核和被拒绝的内容会显示在这里' : '审核通过的内容会显示在这里'}}</text>
+  </view>
+  <view class="loading" wx:if="{{loading}}">正在整理...</view>
+
+  <view class="mask" wx:if="{{showUpload}}" bindtap="hideUpload">
+    <view class="sheet" catchtap="stopBubble">
+      <view class="sheet-head">
+        <text class="sheet-title">添加一张表情</text>
+        <text class="sheet-close" bindtap="hideUpload">×</text>
+      </view>
+
+      <view class="picker" bindtap="chooseImage">
+        <image class="picker-image" wx:if="{{filePath}}" src="{{filePath}}" mode="aspectFit" />
+        <view class="picker-empty" wx:else>
+          <text class="picker-plus">＋</text>
+          <text>从相册或相机选择</text>
+          <text class="picker-hint">JPG / PNG / GIF / WEBP，最大 5 MB</text>
+        </view>
+      </view>
+
+      <text class="field-label">描述</text>
+      <input class="field" value="{{prompt}}" maxlength="60" placeholder="例如：下班后开心冲出办公室" bindinput="onPrompt" />
+
+      <view class="field-head">
+        <text class="field-label">标签</text>
+        <text class="field-hint">最多 5 个，每个 10 字</text>
+      </view>
+      <view class="tag-entry">
+        <input class="field tag-field" value="{{tagInput}}" maxlength="10" placeholder="输入标签" bindinput="onTagInput" bindconfirm="addTag" />
+        <text class="tag-add" bindtap="addTag">添加</text>
+      </view>
+      <view class="tag-list">
+        <view class="tag" wx:for="{{tags}}" wx:key="*this">#{{item}} <text class="tag-remove" data-index="{{index}}" bindtap="removeTag">×</text></view>
+      </view>
+
+      <button class="primary-button submit" loading="{{uploading}}" disabled="{{uploading || !filePath}}" bindtap="upload">保存到私密区</button>
+    </view>
+  </view>
+</view>
+

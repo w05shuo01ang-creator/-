@@ -1,0 +1,137 @@
+.hero {
+  padding: 44rpx 30rpx 34rpx;
+  background: #ffffff;
+  border-bottom: 1rpx solid #e6e9ee;
+}
+
+.brand-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.brand,
+.tagline {
+  display: block;
+}
+
+.brand {
+  color: #18202a;
+  font-size: 54rpx;
+  font-weight: 800;
+}
+
+.tagline {
+  margin-top: 8rpx;
+  color: #77808c;
+  font-size: 26rpx;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 74rpx;
+  height: 74rpx;
+  border-radius: 8rpx;
+  background: #18202a;
+  color: #ffffff;
+  font-size: 25rpx;
+  font-weight: 750;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  height: 84rpx;
+  margin-top: 34rpx;
+  padding: 0 22rpx;
+  border: 2rpx solid #dfe4ea;
+  border-radius: 8rpx;
+  background: #f7f8fa;
+  box-sizing: border-box;
+}
+
+.search-icon {
+  width: 42rpx;
+  color: #18202a;
+  font-size: 39rpx;
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  font-size: 27rpx;
+}
+
+.clear {
+  padding: 12rpx;
+  color: #77808c;
+  font-size: 38rpx;
+}
+
+.section-note {
+  color: #77808c;
+  font-size: 24rpx;
+}
+
+.rank-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.rank-row {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 0 30rpx 8rpx;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  width: 300rpx;
+  height: 108rpx;
+  padding: 0 22rpx;
+  border-left: 7rpx solid #165dff;
+  border-radius: 6rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.rank-item:nth-child(2) { border-left-color: #f04458; }
+.rank-item:nth-child(3) { border-left-color: #168a55; }
+
+.rank-index {
+  margin-right: 18rpx;
+  color: #a6afb9;
+  font-size: 25rpx;
+  font-weight: 700;
+}
+
+.rank-copy,
+.rank-tag,
+.rank-count {
+  display: block;
+}
+
+.rank-tag {
+  overflow: hidden;
+  max-width: 180rpx;
+  font-size: 29rpx;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.rank-count {
+  margin-top: 7rpx;
+  color: #77808c;
+  font-size: 22rpx;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  padding: 0 30rpx 48rpx;
+}
+

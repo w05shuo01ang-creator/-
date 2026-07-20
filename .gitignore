@@ -1,0 +1,19 @@
+# WeChat DevTools local settings
+project.private.config.json
+miniprogram/project.private.config.json
+
+# Dependencies and cloud function bundles
+node_modules/
+cloudfunctions/*/node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and local artifacts
+*.log
+coverage/
+dist/
+

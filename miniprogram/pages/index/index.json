@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "表情舱",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "meme-card": "/components/meme-card/meme-card"
+  }
+}
+

@@ -1,0 +1,9 @@
+{
+  "rules": [
+    { "action": "allow", "page": "pages/index/index" },
+    { "action": "allow", "page": "pages/category/category" },
+    { "action": "allow", "page": "pages/detail/detail" },
+    { "action": "disallow", "page": "pages/my/my" }
+  ]
+}
+

@@ -1,0 +1,64 @@
+<view class="page">
+  <view class="hero">
+    <view class="brand-row">
+      <view>
+        <text class="brand">MemeDock</text>
+        <text class="tagline">今天，用一张图把话说完</text>
+      </view>
+      <view class="brand-mark">MD</view>
+    </view>
+
+    <view class="search">
+      <text class="search-icon">⌕</text>
+      <input class="search-input" value="{{keyword}}" placeholder="搜索情绪、场景或人物" confirm-type="search" bindinput="onInput" bindconfirm="onSearch" />
+      <text class="clear" wx:if="{{keyword}}" bindtap="clearSearch">×</text>
+    </view>
+  </view>
+
+  <block wx:if="{{searching}}">
+    <view class="section-head">
+      <text class="section-title">“{{keyword}}”的结果</text>
+      <text class="section-link" bindtap="clearSearch">返回发现</text>
+    </view>
+    <view class="card-grid" wx:if="{{results.length}}">
+      <meme-card wx:for="{{results}}" wx:key="_id" item="{{item}}" liked="{{likedMap[item._id]}}" bind:open="openDetail" bind:like="toggleLike" />
+    </view>
+    <view class="empty" wx:elif="{{!loading}}">
+      <text class="empty-title">没有匹配的表情</text>
+      <text>换一个更短的关键词试试</text>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="section-head" wx:if="{{rankings.length}}">
+      <text class="section-title">正在流行</text>
+      <text class="section-note">按真实点赞统计</text>
+    </view>
+    <scroll-view class="rank-scroll" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{rankings.length}}">
+      <view class="rank-row">
+        <view class="rank-item" wx:for="{{rankings}}" wx:key="tag" bindtap="openCategory" data-tag="{{item.tag}}">
+          <text class="rank-index">0{{index + 1}}</text>
+          <view class="rank-copy">
+            <text class="rank-tag">#{{item.tag}}</text>
+            <text class="rank-count">{{item.totalLikes}} 次喜欢</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="section-head">
+      <text class="section-title">精选表情</text>
+      <text class="section-note">最近更新</text>
+    </view>
+    <view class="card-grid" wx:if="{{featured.length}}">
+      <meme-card wx:for="{{featured}}" wx:key="_id" item="{{item}}" liked="{{likedMap[item._id]}}" bind:open="openDetail" bind:like="toggleLike" />
+    </view>
+    <view class="empty" wx:elif="{{!loading}}">
+      <text class="empty-title">舱内还没有内容</text>
+      <text>上传第一张表情，并在审核后公开</text>
+    </view>
+  </block>
+
+  <view class="loading" wx:if="{{loading}}">正在连接表情舱...</view>
+</view>
+

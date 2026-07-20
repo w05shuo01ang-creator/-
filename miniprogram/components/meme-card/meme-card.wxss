@@ -1,0 +1,82 @@
+.card {
+  overflow: hidden;
+  border: 1rpx solid #e6e9ee;
+  border-radius: 8rpx;
+  background: #ffffff;
+}
+
+.media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #edf0f4;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+}
+
+.status {
+  position: absolute;
+  top: 14rpx;
+  left: 14rpx;
+  padding: 7rpx 12rpx;
+  border-radius: 6rpx;
+  background: rgba(24, 32, 42, 0.82);
+  color: #ffffff;
+  font-size: 21rpx;
+}
+
+.status-approved { background: rgba(22, 138, 85, 0.9); }
+.status-rejected { background: rgba(240, 68, 88, 0.9); }
+
+.body {
+  padding: 18rpx;
+}
+
+.prompt {
+  display: block;
+  overflow: hidden;
+  height: 40rpx;
+  color: #18202a;
+  font-size: 27rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.tag {
+  overflow: hidden;
+  max-width: 180rpx;
+  color: #77808c;
+  font-size: 23rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.like {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 66rpx;
+  color: #77808c;
+  font-size: 23rpx;
+}
+
+.heart {
+  font-size: 31rpx;
+  line-height: 1;
+}
+
+.is-liked {
+  color: #f04458;
+}

@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "分类",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 160,
+  "usingComponents": {
+    "meme-card": "/components/meme-card/meme-card"
+  }
+}
+

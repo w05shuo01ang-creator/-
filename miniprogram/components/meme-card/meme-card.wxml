@@ -1,0 +1,19 @@
+<view class="card" bindtap="open">
+  <view class="media">
+    <image class="image" src="{{item.displayUrl}}" mode="aspectFill" lazy-load />
+    <view class="status status-{{item.reviewStatus}}" wx:if="{{showStatus}}">
+      {{item.reviewStatusText}}
+    </view>
+  </view>
+  <view class="body">
+    <text class="prompt">{{item.prompt || '未命名表情'}}</text>
+    <view class="meta">
+      <text class="tag">#{{item.tags[0] || '表情包'}}</text>
+      <view class="like {{liked ? 'is-liked' : ''}}" catchtap="like">
+        <text class="heart">{{liked ? '♥' : '♡'}}</text>
+        <text>{{item.totalLikes || 0}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+

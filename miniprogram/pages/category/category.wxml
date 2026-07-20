@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="filter-panel">
+    <view class="search">
+      <input class="search-input" value="{{keyword}}" placeholder="按描述或标签查找" confirm-type="search" bindinput="onInput" bindconfirm="onSearch" />
+      <text class="search-button" bindtap="onSearch">搜索</text>
+    </view>
+    <scroll-view class="categories" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-row">
+        <view class="category {{selected === item ? 'active' : ''}}" wx:for="{{categories}}" wx:key="*this" bindtap="onCategory" data-tag="{{item}}">{{item}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="result-head">
+    <text class="result-title">{{keyword || selected}}</text>
+    <text class="result-count">已加载 {{items.length}} 张</text>
+  </view>
+
+  <view class="card-grid" wx:if="{{items.length}}">
+    <meme-card wx:for="{{items}}" wx:key="_id" item="{{item}}" liked="{{likedMap[item._id]}}" bind:open="openDetail" bind:like="toggleLike" />
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !items.length}}">
+    <text class="empty-title">这一栏还是空的</text>
+    <text>试试其他分类或更短的关键词</text>
+  </view>
+  <view class="list-status" wx:if="{{loading}}">正在加载...</view>
+  <view class="list-status" wx:elif="{{items.length && !hasMore}}">已经到底了</view>
+</view>
+

@@ -1,0 +1,40 @@
+<view class="page detail-page">
+  <block wx:if="{{item}}">
+    <view class="viewer" bindtap="preview">
+      <image class="detail-image" src="{{item.displayUrl}}" mode="aspectFit" />
+      <text class="viewer-hint">点击查看原图</text>
+    </view>
+
+    <view class="detail-body">
+      <text class="prompt">{{item.prompt || '未命名表情'}}</text>
+      <view class="summary">
+        <text class="date">{{item.createdAtText}}</text>
+        <view class="main-like {{liked ? 'liked' : ''}}" bindtap="toggleLike">
+          <text class="heart">{{liked ? '♥' : '♡'}}</text>
+          <text>{{item.totalLikes || 0}}</text>
+        </view>
+      </view>
+
+      <view class="divider"></view>
+      <text class="tag-title">这个表情像什么？</text>
+      <view class="tags">
+        <view class="tag" wx:for="{{tagItems}}" wx:key="name" wx:for-item="tagItem">
+          <text>#{{tagItem.name}}</text>
+          <view class="tag-like {{tagItem.liked ? 'liked' : ''}}" bindtap="toggleTag" data-tag="{{tagItem.name}}">
+            <text>{{tagItem.liked ? '♥' : '♡'}}</text>
+            <text>{{tagItem.count}}</text>
+          </view>
+        </view>
+      </view>
+
+      <button class="primary-button save-button" bindtap="save">保存到相册</button>
+      <button class="share-button" open-type="share">分享给朋友</button>
+    </view>
+  </block>
+
+  <view class="loading detail-loading" wx:if="{{loading}}">正在打开...</view>
+  <view class="empty" wx:elif="{{!item}}">
+    <text class="empty-title">表情不存在或不可访问</text>
+    <text>私密内容只有上传者可以查看</text>
+  </view>
+</view>
