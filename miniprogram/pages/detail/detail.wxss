@@ -163,6 +163,15 @@
   line-height: 82rpx;
 }
 
+.report-button {
+  height: 72rpx;
+  margin-top: 12rpx;
+  background: transparent;
+  color: #77808c;
+  font-size: 24rpx;
+  line-height: 72rpx;
+}
+
 .detail-loading {
   color: #ffffff;
   background: #18202a;

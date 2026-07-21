@@ -29,6 +29,7 @@
 
       <button class="primary-button save-button" bindtap="save">保存到相册</button>
       <button class="share-button" open-type="share">分享给朋友</button>
+      <button class="report-button" bindtap="report">举报此内容</button>
     </view>
   </block>
 

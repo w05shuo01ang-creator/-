@@ -47,7 +47,7 @@ Page({
     this.setData({
       filtered: this.data.items.filter(item => {
         if (tab === 'public') return item.reviewStatus === 'approved'
-        if (tab === 'review') return ['pending', 'rejected'].includes(item.reviewStatus)
+        if (tab === 'review') return ['pending', 'auto_reviewing', 'manual_review', 'rejected'].includes(item.reviewStatus)
         return item.reviewStatus === 'private'
       })
     })
@@ -74,8 +74,7 @@ Page({
       const result = await wx.chooseMedia({
         count: 1,
         mediaType: ['image'],
-        sourceType: ['album', 'camera'],
-        sizeType: ['compressed']
+        sourceType: ['album', 'camera']
       })
       const file = result.tempFiles[0]
       if (file.size > 5 * 1024 * 1024) {
@@ -149,9 +148,11 @@ Page({
       success: async result => {
         if (!result.confirm) return
         try {
-          await api.requestPublish(id)
-          wx.showToast({ title: '已提交审核', icon: 'success' })
-          this.setData({ currentTab: 'review' })
+          const review = await api.requestPublish(id)
+          const approved = review.status === 'approved'
+          const title = approved ? '审核通过并公开' : review.status === 'rejected' ? '审核未通过' : '已转人工审核'
+          wx.showToast({ title, icon: approved ? 'success' : 'none' })
+          this.setData({ currentTab: approved ? 'public' : 'review' })
           await this.load()
         } catch (error) {
           wx.showToast({ title: messageOf(error, '提交失败'), icon: 'none' })
@@ -198,4 +199,3 @@ Page({
     })
   }
 })
-

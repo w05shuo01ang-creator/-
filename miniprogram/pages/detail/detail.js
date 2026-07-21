@@ -81,6 +81,21 @@ Page({
       .finally(wx.hideLoading)
   },
 
+  report() {
+    const reasons = ['违法或不良内容', '侵犯版权或肖像权', '泄露个人隐私', '垃圾广告', '其他问题']
+    wx.showActionSheet({
+      itemList: reasons,
+      success: async result => {
+        try {
+          await api.reportMeme(this.data.id, reasons[result.tapIndex])
+          wx.showToast({ title: '举报已提交', icon: 'success' })
+        } catch (error) {
+          wx.showToast({ title: messageOf(error, '提交失败'), icon: 'none' })
+        }
+      }
+    })
+  },
+
   onShareAppMessage() {
     const item = this.data.item
     return {

@@ -47,7 +47,7 @@
         <view class="picker-empty" wx:else>
           <text class="picker-plus">＋</text>
           <text>从相册或相机选择</text>
-          <text class="picker-hint">JPG / PNG / GIF / WEBP，最大 5 MB</text>
+          <text class="picker-hint">JPG / PNG，最大 5 MB</text>
         </view>
       </view>
 
@@ -70,4 +70,3 @@
     </view>
   </view>
 </view>
-

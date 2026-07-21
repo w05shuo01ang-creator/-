@@ -28,18 +28,31 @@ function bootstrap() {
 function extensionOf(filePath) {
   const match = String(filePath || '').match(/\.([a-zA-Z0-9]+)$/)
   const extension = match ? match[1].toLowerCase() : 'jpg'
-  return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension) ? extension : 'jpg'
+  return ['jpg', 'jpeg', 'png'].includes(extension) ? extension : 'jpg'
+}
+
+function prepareImage(filePath) {
+  return wx.compressImage({
+    src: filePath,
+    quality: 76,
+    compressedWidth: 1600,
+    compressedHeight: 1600
+  }).then(result => {
+    if (!result || !result.tempFilePath) throw new Error('图片处理失败')
+    return result.tempFilePath
+  })
 }
 
 async function uploadMeme({ filePath, prompt, tags }) {
   const session = await bootstrap()
+  const preparedPath = await prepareImage(filePath)
   const cloudPath = [
     'uploads',
     session.ownerKey,
-    `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${extensionOf(filePath)}`
+    `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${extensionOf(preparedPath)}`
   ].join('/')
 
-  const uploaded = await wx.cloud.uploadFile({ cloudPath, filePath })
+  const uploaded = await wx.cloud.uploadFile({ cloudPath, filePath: preparedPath })
   try {
     return await call('create', { fileID: uploaded.fileID, prompt, tags })
   } catch (error) {
@@ -75,6 +88,6 @@ module.exports = {
   deleteMeme: id => call('delete', { id }),
   toggleLike: id => call('toggleLike', { id }),
   toggleTagLike: (id, tag) => call('toggleTagLike', { id, tag }),
+  reportMeme: (id, reason) => call('report', { id, reason }),
   saveToAlbum
 }
-
