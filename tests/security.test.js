@@ -87,4 +87,8 @@ assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'risky' } }
 assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'review' } }).decision, 'manual')
 assert.strictEqual(moderationResult({ errCode: 0 }, true).decision, 'pass')
 
+const uploadMedia = { contentType: validJpeg.mimeType, value: validJpeg.buffer }
+assert.strictEqual(uploadMedia.contentType, 'image/jpeg')
+assert.ok(Buffer.isBuffer(uploadMedia.value))
+
 console.log('security tests passed')

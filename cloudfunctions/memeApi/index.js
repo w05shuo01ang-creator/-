@@ -480,11 +480,13 @@ async function updateReview(id, status, details) {
 
 async function autoModerate(item, openid) {
   const auditBase = { memeId: item._id, ownerOpenidHash: digest(openid, 16), source: 'wechat-security' }
+  let stage = 'download'
   try {
     const downloaded = await cloud.downloadFile({ fileID: item.fileID })
     const image = inspectImage(downloaded.fileContent)
     const text = cleanText(`${item.prompt || ''} ${(item.tags || []).join(' ')}`, 120)
 
+    stage = 'text-check'
     const textResponse = await cloud.openapi.security.msgSecCheck({
       content: text,
       version: 2,
@@ -499,7 +501,13 @@ async function autoModerate(item, openid) {
       return { status: 'rejected' }
     }
 
-    const imageResponse = await cloud.openapi.security.imgSecCheck({ media: image.buffer })
+    stage = 'image-check'
+    const imageResponse = await cloud.openapi.security.imgSecCheck({
+      media: {
+        contentType: image.mimeType,
+        value: image.buffer
+      }
+    })
     const imageCheck = moderationResult(imageResponse, true)
     const decision = textCheck.decision === 'pass' && imageCheck.decision === 'pass'
       ? 'approved'
@@ -522,6 +530,7 @@ async function autoModerate(item, openid) {
       const details = {
         decision: 'reject',
         reason: 'security-api-rejected',
+        stage,
         errorCode: moderationCode,
         reviewedAt: new Date()
       }
@@ -532,6 +541,7 @@ async function autoModerate(item, openid) {
     const details = {
       decision: 'manual_review',
       reason: 'moderation-unavailable',
+      stage,
       errorCode: cleanText(error && (error.errCode || error.code || error.message), 80),
       reviewedAt: new Date()
     }
