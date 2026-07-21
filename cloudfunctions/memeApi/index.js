@@ -555,7 +555,7 @@ async function autoModerate(item, openid) {
 async function requestPublish(id, openid) {
   const item = await getOwnedOrPublic(id, openid)
   if (item._openid !== openid) throw new ApiError('FORBIDDEN', '只能发布自己的表情')
-  if (!['private', 'rejected'].includes(item.reviewStatus)) {
+  if (!['private', 'manual_review', 'rejected'].includes(item.reviewStatus)) {
     throw new ApiError('INVALID_STATE', '当前状态不能重复提交')
   }
 

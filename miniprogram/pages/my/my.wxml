@@ -23,7 +23,7 @@
       </view>
       <view class="actions">
         <text class="action" catchtap="save" data-item="{{item}}">保存</text>
-        <text class="action primary" wx:if="{{item.reviewStatus === 'private' || item.reviewStatus === 'rejected'}}" catchtap="publish" data-id="{{item._id}}">公开</text>
+        <text class="action primary" wx:if="{{item.reviewStatus === 'private' || item.reviewStatus === 'manual_review' || item.reviewStatus === 'rejected'}}" catchtap="publish" data-id="{{item._id}}">{{item.reviewStatus === 'manual_review' ? '重试审核' : '公开'}}</text>
         <text class="action danger" catchtap="remove" data-id="{{item._id}}">删除</text>
       </view>
     </view>
