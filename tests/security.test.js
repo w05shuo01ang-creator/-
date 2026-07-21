@@ -25,8 +25,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, moderationResult }`, sandbox)
-const { inspectImage, moderationResult } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -77,8 +77,13 @@ assert.strictEqual(validJpeg.mimeType, 'image/jpeg')
 assert.strictEqual(validJpeg.width, 800)
 assert.strictEqual(validJpeg.height, 600)
 
-assert.throws(() => inspectImage(png(640, 480, true)), /元数据/)
-assert.throws(() => inspectImage(jpeg(800, 600, true)), /元数据/)
+const cleanPng = sanitizeImage(png(640, 480, true))
+assert.strictEqual(cleanPng.metadataRemoved, true)
+assert.strictEqual(inspectImage(cleanPng.buffer).mimeType, 'image/png')
+
+const cleanJpeg = sanitizeImage(jpeg(800, 600, true))
+assert.strictEqual(cleanJpeg.metadataRemoved, true)
+assert.strictEqual(inspectImage(cleanJpeg.buffer).mimeType, 'image/jpeg')
 assert.throws(() => inspectImage(png(5000, 100)), /边长/)
 assert.throws(() => inspectImage(Buffer.from('not an image')), /JPG 或 PNG/)
 

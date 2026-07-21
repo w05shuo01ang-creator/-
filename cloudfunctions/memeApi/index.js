@@ -82,10 +82,6 @@ function readJpegInfo(buffer) {
 
     const segmentLength = buffer.readUInt16BE(offset)
     if (segmentLength < 2 || offset + segmentLength > buffer.length) break
-    if (marker === 0xe1) {
-      throw new ApiError('IMAGE_METADATA', '图片包含位置或设备元数据，请截图后重新上传')
-    }
-
     const isStartOfFrame = [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)
     if (isStartOfFrame && segmentLength >= 7) {
       height = buffer.readUInt16BE(offset + 3)
@@ -105,16 +101,12 @@ function readPngInfo(buffer) {
     throw new ApiError('INVALID_FILE', 'PNG 文件缺少有效的图片头')
   }
 
-  const metadataChunks = new Set(['eXIf', 'tEXt', 'zTXt', 'iTXt'])
   let offset = 8
   let hasImageData = false
   let hasEnd = false
   while (offset + 12 <= buffer.length) {
     const length = buffer.readUInt32BE(offset)
     const type = buffer.toString('ascii', offset + 4, offset + 8)
-    if (metadataChunks.has(type)) {
-      throw new ApiError('IMAGE_METADATA', '图片包含附加元数据，请截图后重新上传')
-    }
     if (type === 'IDAT') hasImageData = true
     offset += 12 + length
     if (type === 'IEND') {
@@ -130,6 +122,83 @@ function readPngInfo(buffer) {
     width: buffer.readUInt32BE(16),
     height: buffer.readUInt32BE(20)
   }
+}
+
+function stripJpegMetadata(buffer) {
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return null
+  const parts = [buffer.subarray(0, 2)]
+  const privateMarkers = new Set([0xe1, 0xed, 0xfe])
+  let offset = 2
+  let removed = false
+
+  while (offset < buffer.length) {
+    const markerStart = offset
+    if (buffer[offset] !== 0xff) throw new ApiError('INVALID_FILE', 'JPEG 文件结构无效')
+    while (offset < buffer.length && buffer[offset] === 0xff) offset++
+    const marker = buffer[offset++]
+
+    if (marker === 0xda || marker === 0xd9) {
+      parts.push(buffer.subarray(markerStart))
+      return { buffer: Buffer.concat(parts), metadataRemoved: removed }
+    }
+    if (marker >= 0xd0 && marker <= 0xd7) {
+      parts.push(buffer.subarray(markerStart, offset))
+      continue
+    }
+    if (offset + 2 > buffer.length) throw new ApiError('INVALID_FILE', 'JPEG 文件内容不完整')
+
+    const segmentLength = buffer.readUInt16BE(offset)
+    const segmentEnd = offset + segmentLength
+    if (segmentLength < 2 || segmentEnd > buffer.length) {
+      throw new ApiError('INVALID_FILE', 'JPEG 文件段长度无效')
+    }
+    if (privateMarkers.has(marker)) {
+      removed = true
+    } else {
+      parts.push(buffer.subarray(markerStart, segmentEnd))
+    }
+    offset = segmentEnd
+  }
+
+  throw new ApiError('INVALID_FILE', 'JPEG 文件缺少结束标记')
+}
+
+function stripPngMetadata(buffer) {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  if (buffer.length < 24 || !buffer.subarray(0, 8).equals(signature)) return null
+  const metadataChunks = new Set(['eXIf', 'tEXt', 'zTXt', 'iTXt'])
+  const parts = [buffer.subarray(0, 8)]
+  let offset = 8
+  let removed = false
+
+  while (offset + 12 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset)
+    const chunkEnd = offset + 12 + length
+    if (chunkEnd > buffer.length) throw new ApiError('INVALID_FILE', 'PNG 文件结构无效')
+    const type = buffer.toString('ascii', offset + 4, offset + 8)
+    if (metadataChunks.has(type)) {
+      removed = true
+    } else {
+      parts.push(buffer.subarray(offset, chunkEnd))
+    }
+    offset = chunkEnd
+    if (type === 'IEND') return { buffer: Buffer.concat(parts), metadataRemoved: removed }
+  }
+
+  throw new ApiError('INVALID_FILE', 'PNG 文件缺少结束标记')
+}
+
+function sanitizeImage(fileContent) {
+  const buffer = Buffer.isBuffer(fileContent) ? fileContent : Buffer.from(fileContent || [])
+  const sanitized = stripPngMetadata(buffer) || stripJpegMetadata(buffer)
+  if (!sanitized) throw new ApiError('INVALID_FILE_TYPE', '仅支持真实的 JPG 或 PNG 图片')
+  return sanitized
+}
+
+function cloudPathFromFileID(fileID) {
+  const match = String(fileID || '').match(/^cloud:\/\/[^/]+\/(.+)$/)
+  if (!match || !match[1]) throw new ApiError('INVALID_FILE', '无法识别云存储路径')
+  return match[1]
 }
 
 function inspectImage(fileContent) {
@@ -412,7 +481,16 @@ async function create(payload, openid) {
   }
 
   const downloaded = await cloud.downloadFile({ fileID })
-  const inspected = inspectImage(downloaded.fileContent)
+  const sanitized = sanitizeImage(downloaded.fileContent)
+  const inspected = inspectImage(sanitized.buffer)
+  let safeFileID = fileID
+  if (sanitized.metadataRemoved) {
+    const replaced = await cloud.uploadFile({
+      cloudPath: cloudPathFromFileID(fileID),
+      fileContent: sanitized.buffer
+    })
+    safeFileID = replaced.fileID || fileID
+  }
   const duplicate = await db.collection(MEMES)
     .where({ _openid: openid, contentHash: inspected.contentHash })
     .limit(1)
@@ -428,7 +506,7 @@ async function create(payload, openid) {
   const result = await db.collection(MEMES).add({
     data: {
       _openid: openid,
-      fileID,
+      fileID: safeFileID,
       contentHash: inspected.contentHash,
       fileSize: inspected.fileSize,
       mimeType: inspected.mimeType,
