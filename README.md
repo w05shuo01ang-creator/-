@@ -53,6 +53,8 @@ node tests/security.test.js
 
 安全边界见 [SECURITY.md](SECURITY.md)，内容审核方案见 [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md)，规模化演进建议见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
+首批素材可使用 [批量图片智能标注工具](docs/BULK_LABELING.md) 生成描述与标签清单。工具不会绕过生产环境的上传校验和内容审核。
+
 ## License
 
 [MIT](LICENSE)
