@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const { matchBatchFiles, parseBatchManifest } = require('../../utils/batch')
 const { messageOf } = require('../../utils/view')
 
 Page({
@@ -9,6 +10,9 @@ Page({
     filtered: [],
     showUpload: false,
     uploading: false,
+    batchUploadEnabled: false,
+    batchUploading: false,
+    batchProgress: '',
     filePath: '',
     prompt: '',
     tagInput: '',
@@ -27,8 +31,11 @@ Page({
   async load() {
     this.setData({ loading: true })
     try {
-      const data = await api.getMine()
-      this.setData({ items: data.items || [] })
+      const [session, data] = await Promise.all([api.bootstrap(), api.getMine()])
+      this.setData({
+        items: data.items || [],
+        batchUploadEnabled: session.batchUploadEnabled === true
+      })
       this.filterItems()
     } catch (error) {
       wx.showToast({ title: messageOf(error, '加载失败'), icon: 'none' })
@@ -130,6 +137,103 @@ Page({
     }
   },
 
+  async startBatchUpload() {
+    if (this.data.batchUploading || this.data.uploading) return
+    try {
+      const manifestResult = await wx.chooseMessageFile({
+        count: 1,
+        type: 'file',
+        extension: ['json']
+      })
+      const manifestFile = manifestResult.tempFiles && manifestResult.tempFiles[0]
+      if (!manifestFile) return
+      if (Number(manifestFile.size) > 2 * 1024 * 1024) throw new Error('批量清单不能超过 2 MB')
+      const manifestPath = manifestFile.path || manifestFile.tempFilePath
+      const manifestText = wx.getFileSystemManager().readFileSync(manifestPath, 'utf8')
+      const manifestItems = parseBatchManifest(manifestText)
+
+      const fileResult = await wx.chooseMessageFile({
+        count: Math.min(100, manifestItems.length),
+        type: 'file',
+        extension: ['jpg', 'jpeg', 'png']
+      })
+      const matched = matchBatchFiles(fileResult.tempFiles, manifestItems)
+      const confirmation = await wx.showModal({
+        title: `导入 ${matched.length} 张表情`,
+        content: '将逐张上传并自动提交内容审核。处理期间请保持本页和网络连接。',
+        confirmText: '开始导入'
+      })
+      if (!confirmation.confirm) return
+      await this.runBatchUpload(matched)
+    } catch (error) {
+      if (!String(error.errMsg || '').includes('cancel')) {
+        wx.showModal({ title: '无法批量导入', content: messageOf(error, '读取批量文件失败'), showCancel: false })
+      }
+    }
+  },
+
+  async runBatchUpload(items) {
+    this.batchStopRequested = false
+    this.setData({ batchUploading: true, batchProgress: `准备上传 0/${items.length}` })
+    wx.setKeepScreenOn({ keepScreenOn: true })
+    let uploaded = 0
+    let approved = 0
+    let notApproved = 0
+    let privateOnly = 0
+    const uploadFailures = []
+
+    try {
+      for (let index = 0; index < items.length; index++) {
+        if (this.batchStopRequested) break
+        const item = items[index]
+        this.setData({ batchProgress: `正在上传 ${index + 1}/${items.length}` })
+        try {
+          const created = await api.uploadMeme({
+            filePath: item.filePath,
+            prompt: item.prompt,
+            tags: item.tags
+          })
+          uploaded++
+          this.setData({ batchProgress: `正在审核 ${index + 1}/${items.length}` })
+          try {
+            const review = await api.requestPublish(created.id)
+            if (review.status === 'approved') approved++
+            else notApproved++
+          } catch (error) {
+            privateOnly++
+          }
+        } catch (error) {
+          uploadFailures.push(`${item.uploadFile}：${messageOf(error, '上传失败')}`)
+          if (['STORAGE_LIMITED', 'UPLOAD_LIMITED'].includes(error.code)) {
+            this.batchStopRequested = true
+          }
+        }
+      }
+    } finally {
+      wx.setKeepScreenOn({ keepScreenOn: false })
+      const stopped = this.batchStopRequested
+      this.setData({ batchUploading: false, batchProgress: '' })
+      this.batchStopRequested = false
+      const summary = [
+        `已上传 ${uploaded} 张`,
+        `自动公开 ${approved} 张`,
+        `未自动公开 ${notApproved} 张`,
+        `仅保存私密 ${privateOnly} 张`,
+        `上传失败 ${uploadFailures.length} 张`
+      ]
+      if (stopped) summary.push('任务已停止')
+      if (uploadFailures.length) summary.push(`首个问题：${uploadFailures[0]}`)
+      await wx.showModal({ title: '批量导入结束', content: summary.join('\n'), showCancel: false })
+      this.setData({ currentTab: approved ? 'public' : notApproved ? 'review' : 'private' })
+      await this.load()
+    }
+  },
+
+  stopBatchUpload() {
+    this.batchStopRequested = true
+    this.setData({ batchProgress: '将在当前图片处理完成后停止' })
+  },
+
   openDetail(event) {
     wx.navigateTo({ url: `/pages/detail/detail?id=${event.currentTarget.dataset.id}` })
   },
@@ -197,5 +301,9 @@ Page({
         }
       }
     })
+  },
+
+  onUnload() {
+    this.batchStopRequested = true
   }
 })

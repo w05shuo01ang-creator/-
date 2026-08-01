@@ -11,6 +11,10 @@
   display: block;
 }
 
+.account-head > view:first-child {
+  min-width: 0;
+}
+
 .head-title {
   font-size: 42rpx;
   font-weight: 750;
@@ -22,16 +26,57 @@
   font-size: 24rpx;
 }
 
-.upload-button {
+.head-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12rpx;
+  margin-left: 18rpx;
+}
+
+.upload-button,
+.batch-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 70rpx;
   margin: 0;
-  padding: 0 24rpx;
+  padding: 0 20rpx;
   border-radius: 7rpx;
-  background: #165dff;
-  color: #ffffff;
   font-size: 26rpx;
   font-weight: 650;
-  line-height: 70rpx;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.upload-button {
+  background: #165dff;
+  color: #ffffff;
+}
+
+.batch-button {
+  border: 1rpx solid #c9d8ff;
+  background: #edf3ff;
+  color: #165dff;
+}
+
+.batch-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72rpx;
+  padding: 0 30rpx;
+  border-bottom: 1rpx solid #d7e2ff;
+  background: #edf3ff;
+  color: #27466f;
+  font-size: 24rpx;
+  box-sizing: border-box;
+}
+
+.batch-stop {
+  padding: 18rpx 0 18rpx 24rpx;
+  color: #f04458;
+  font-weight: 650;
 }
 
 .tabs {
@@ -256,4 +301,3 @@
 
 .tag-remove { margin-left: 10rpx; }
 .submit { margin-top: 28rpx; }
-

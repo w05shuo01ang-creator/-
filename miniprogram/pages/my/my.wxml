@@ -4,13 +4,21 @@
       <text class="head-title">我的表情</text>
       <text class="head-sub">上传、审核和管理都在这里</text>
     </view>
-    <button class="upload-button" bindtap="showUpload">＋ 上传</button>
+    <view class="head-actions">
+      <button class="batch-button" wx:if="{{batchUploadEnabled}}" bindtap="startBatchUpload" disabled="{{batchUploading}}">批量</button>
+      <button class="upload-button" bindtap="showUpload" disabled="{{batchUploading}}">＋ 上传</button>
+    </view>
   </view>
 
   <view class="tabs">
     <view class="tab {{currentTab === 'private' ? 'active' : ''}}" data-tab="private" bindtap="changeTab">私密</view>
     <view class="tab {{currentTab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="changeTab">审核</view>
     <view class="tab {{currentTab === 'public' ? 'active' : ''}}" data-tab="public" bindtap="changeTab">已公开</view>
+  </view>
+
+  <view class="batch-progress" wx:if="{{batchUploading}}">
+    <text>{{batchProgress}}</text>
+    <text class="batch-stop" bindtap="stopBatchUpload">停止</text>
   </view>
 
   <view class="mine-list" wx:if="{{filtered.length}}">

@@ -16,10 +16,13 @@ function usage() {
   node tools/bulk-label-images.js <图片目录> [选项]
 
 选项：
-  --output <文件>       JSON 输出路径（默认：<图片目录>/memecraft-labels.json）
+  --output <文件>       JSON 输出路径（默认：导出目录或图片目录下的 memecraft-labels.json）
   --csv <文件>          同时输出便于人工检查的 CSV
+  --export-dir <目录>   导出净化后的待上传图片，并生成唯一文件名
+  --prompt-from-filename 使用原始文件名作为描述，模型只生成标签
   --concurrency <数量>  并发请求数，1-4（默认：2）
   --limit <数量>        本次最多处理多少张图片
+  --balanced            配合 --limit，按一级目录轮流抽取图片
   --force               忽略已有成功结果并重新分析
   --dry-run             只检查图片，不调用视觉模型
   --help                显示帮助
@@ -39,9 +42,12 @@ function parseArgs(argv) {
     if (argument === '--help') options.help = true
     else if (argument === '--force') options.force = true
     else if (argument === '--dry-run') options.dryRun = true
-    else if (['--output', '--csv', '--concurrency', '--limit'].includes(argument)) {
+    else if (argument === '--balanced') options.balanced = true
+    else if (argument === '--prompt-from-filename') options.promptFromFilename = true
+    else if (['--output', '--csv', '--export-dir', '--concurrency', '--limit'].includes(argument)) {
       if (!argv[index + 1]) throw new Error(`${argument} 缺少参数`)
-      options[argument.slice(2)] = argv[++index]
+      const optionName = argument === '--export-dir' ? 'exportDir' : argument.slice(2)
+      options[optionName] = argv[++index]
     } else if (argument.startsWith('--')) {
       throw new Error(`未知选项：${argument}`)
     } else {
@@ -52,7 +58,14 @@ function parseArgs(argv) {
   if (options.help) return options
   if (positional.length !== 1) throw new Error('请提供一个图片目录')
   options.input = path.resolve(positional[0])
-  options.output = path.resolve(options.output || path.join(options.input, 'memecraft-labels.json'))
+  if (options.exportDir) {
+    options.exportDir = path.resolve(options.exportDir)
+    const relativeExport = path.relative(options.input, options.exportDir)
+    if (!relativeExport || (!relativeExport.startsWith('..') && !path.isAbsolute(relativeExport))) {
+      throw new Error('--export-dir 必须位于图片源目录之外，避免重复处理导出文件')
+    }
+  }
+  options.output = path.resolve(options.output || path.join(options.exportDir || options.input, 'memecraft-labels.json'))
   if (options.csv) options.csv = path.resolve(options.csv)
   options.concurrency = Number(options.concurrency)
   if (!Number.isInteger(options.concurrency) || options.concurrency < 1 || options.concurrency > 4) {
@@ -78,6 +91,29 @@ function listImages(root) {
   }
   walk(root)
   return files
+}
+
+function selectBalanced(files, root, limit) {
+  const groups = new Map()
+  files.forEach(filePath => {
+    const relative = path.relative(root, filePath)
+    const parts = relative.split(path.sep)
+    const group = parts.length > 1 ? parts[0] : '(root)'
+    if (!groups.has(group)) groups.set(group, [])
+    groups.get(group).push(filePath)
+  })
+  const queues = Array.from(groups.keys())
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    .map(key => groups.get(key))
+  const selected = []
+  while (selected.length < limit && queues.length) {
+    for (let index = queues.length - 1; index >= 0 && selected.length < limit; index--) {
+      const filePath = queues[index].shift()
+      if (filePath) selected.push(filePath)
+      if (!queues[index].length) queues.splice(index, 1)
+    }
+  }
+  return selected
 }
 
 function stripJpegMetadata(buffer) {
@@ -200,6 +236,28 @@ function cleanText(value, maxLength) {
   return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, maxLength)
 }
 
+function promptFromFilename(filePath) {
+  const extension = path.extname(filePath)
+  return cleanText(path.basename(filePath, extension), 60) || '表情包'
+}
+
+function uploadFilename(relativePath, index, mimeType) {
+  const extension = mimeType === 'image/png' ? '.png' : '.jpg'
+  const original = path.basename(relativePath, path.extname(relativePath))
+  const safeName = cleanText(original, 36)
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'meme'
+  const pathHash = crypto.createHash('sha256').update(relativePath).digest('hex').slice(0, 8)
+  return `${String(index + 1).padStart(4, '0')}_${safeName}_${pathHash}${extension}`
+}
+
+function exportImage(directory, fileName, buffer) {
+  fs.mkdirSync(directory, { recursive: true })
+  fs.writeFileSync(path.join(directory, fileName), buffer)
+}
+
 function normalizeLabels(value) {
   if (!value || typeof value !== 'object') throw new Error('模型没有返回 JSON 对象')
   const tags = []
@@ -240,7 +298,9 @@ function requestLabels(image, config) {
       content: [
         {
           type: 'text',
-          text: '分析这张表情包。只返回 JSON：{"prompt":"一句自然的中文场景描述，不超过60字","tags":["标签1","标签2"]}。标签必须是2到5个简短中文词，每个不超过10字，优先表达情绪、动作、使用场景和画面主体，不要猜测真实人物身份。'
+          text: config.tagsOnly
+            ? '分析这张表情包。只返回 JSON：{"tags":["标签1","标签2"]}。标签必须是2到5个简短中文词，每个不超过10字，优先表达情绪、动作、使用场景和画面主体，不要猜测真实人物身份。'
+            : '分析这张表情包。只返回 JSON：{"prompt":"一句自然的中文场景描述，不超过60字","tags":["标签1","标签2"]}。标签必须是2到5个简短中文词，每个不超过10字，优先表达情绪、动作、使用场景和画面主体，不要猜测真实人物身份。'
         },
         {
           type: 'image_url',
@@ -305,7 +365,7 @@ function writeManifest(filePath, inputDirectory, items) {
   const value = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    sourceDirectory: inputDirectory,
+    sourceName: path.basename(inputDirectory),
     items: items.slice().sort((left, right) => left.file.localeCompare(right.file, 'zh-CN'))
   }
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
@@ -319,8 +379,8 @@ function csvCell(value) {
 
 function writeCsv(filePath, items) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-  const rows = [['file', 'prompt', 'tags', 'status', 'error']]
-  items.forEach(item => rows.push([item.file, item.prompt, (item.tags || []).join('|'), item.status, item.error || '']))
+  const rows = [['file', 'upload_file', 'prompt', 'tags', 'status', 'error']]
+  items.forEach(item => rows.push([item.file, item.uploadFile || '', item.prompt, (item.tags || []).join('|'), item.status, item.error || '']))
   fs.writeFileSync(filePath, `\ufeff${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`, 'utf8')
 }
 
@@ -351,7 +411,9 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
   const manifest = readManifest(options.output)
   const resultByFile = new Map(manifest.items.map(item => [item.file, item]))
   let files = listImages(options.input)
-  if (options.limit) files = files.slice(0, options.limit)
+  if (options.limit) files = options.balanced
+    ? selectBalanced(files, options.input, options.limit)
+    : files.slice(0, options.limit)
   console.log(`找到 ${files.length} 张 JPG/PNG 图片`)
 
   await runPool(files, options.concurrency, async (filePath, index) => {
@@ -359,24 +421,36 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
     try {
       const image = prepareImage(filePath)
       const previous = resultByFile.get(relativePath)
+      const prompt = options.promptFromFilename ? promptFromFilename(filePath) : ''
+      const uploadFile = options.exportDir ? uploadFilename(relativePath, index, image.mimeType) : ''
       if (!options.force && previous && previous.status === 'ready' && previous.sha256 === image.sha256) {
+        const resumed = {
+          ...previous,
+          prompt: prompt || previous.prompt,
+          uploadFile: uploadFile || previous.uploadFile || ''
+        }
+        resultByFile.set(relativePath, resumed)
+        if (options.exportDir) exportImage(options.exportDir, uploadFile, image.buffer)
         console.log(`[${index + 1}/${files.length}] 跳过 ${relativePath}`)
         return
       }
       const labels = options.dryRun ? { prompt: '', tags: [] } : await requestLabels(image, {
         apiUrl: environment.VISION_API_URL,
         apiKey: environment.VISION_API_KEY,
-        model: environment.VISION_MODEL
+        model: environment.VISION_MODEL,
+        tagsOnly: options.promptFromFilename
       })
+      if (options.exportDir) exportImage(options.exportDir, uploadFile, image.buffer)
       resultByFile.set(relativePath, {
         file: relativePath,
+        uploadFile,
         sha256: image.sha256,
         mimeType: image.mimeType,
         byteSize: image.byteSize,
         width: image.width,
         height: image.height,
         metadataRemovedBeforeAnalysis: image.metadataRemoved,
-        prompt: labels.prompt,
+        prompt: prompt || labels.prompt,
         tags: labels.tags,
         status: options.dryRun ? 'checked' : 'ready'
       })
@@ -400,6 +474,7 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
   console.log(`处理结束：成功 ${ready}，失败 ${failed}`)
   console.log(`JSON 清单：${options.output}`)
   if (options.csv) console.log(`CSV 清单：${options.csv}`)
+  if (options.exportDir) console.log(`待上传图片：${options.exportDir}`)
   if (failed) process.exitCode = 2
 }
 
@@ -416,7 +491,10 @@ module.exports = {
   parseArgs,
   parseModelJson,
   prepareImage,
+  promptFromFilename,
+  selectBalanced,
   stripJpegMetadata,
   stripPngMetadata,
+  uploadFilename,
   validateDimensions
 }

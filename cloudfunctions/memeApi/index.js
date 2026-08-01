@@ -19,6 +19,9 @@ const MAX_IMAGE_PIXELS = 16 * 1024 * 1024
 const MAX_USER_MEMES = 100
 const DAILY_UPLOAD_COUNT = 10
 const DAILY_UPLOAD_BYTES = 25 * 1024 * 1024
+const ADMIN_DAILY_UPLOAD_COUNT = 100
+const ADMIN_DAILY_UPLOAD_BYTES = 250 * 1024 * 1024
+const ADMIN_DAILY_PUBLISH_COUNT = 100
 
 class ApiError extends Error {
   constructor(code, message) {
@@ -39,6 +42,14 @@ function digest(value, length = 40) {
 
 function ownerKey(openid) {
   return digest(`owner:${openid}`, 24)
+}
+
+function isAdmin(openid) {
+  return String(process.env.ADMIN_OPENIDS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+    .includes(openid)
 }
 
 function cleanId(value) {
@@ -259,6 +270,9 @@ async function consumeRateLimit(openid, action, maximum, windowMs) {
 }
 
 async function consumeUploadQuota(openid, fileSize) {
+  const admin = isAdmin(openid)
+  const maximumCount = admin ? ADMIN_DAILY_UPLOAD_COUNT : DAILY_UPLOAD_COUNT
+  const maximumBytes = admin ? ADMIN_DAILY_UPLOAD_BYTES : DAILY_UPLOAD_BYTES
   const day = new Date().toISOString().slice(0, 10)
   const id = digest(`upload:${openid}:${day}`)
   return db.runTransaction(async transaction => {
@@ -270,10 +284,10 @@ async function consumeUploadQuota(openid, fileSize) {
       usage = { count: 0, bytes: 0 }
     }
 
-    if ((Number(usage.count) || 0) + 1 > DAILY_UPLOAD_COUNT) {
+    if ((Number(usage.count) || 0) + 1 > maximumCount) {
       throw new ApiError('UPLOAD_LIMITED', '今日上传次数已用完')
     }
-    if ((Number(usage.bytes) || 0) + fileSize > DAILY_UPLOAD_BYTES) {
+    if ((Number(usage.bytes) || 0) + fileSize > maximumBytes) {
       throw new ApiError('UPLOAD_LIMITED', '今日上传容量已用完')
     }
 
@@ -371,7 +385,7 @@ function matches(item, tag, query) {
 }
 
 async function bootstrap(openid) {
-  return { ownerKey: ownerKey(openid) }
+  return { ownerKey: ownerKey(openid), batchUploadEnabled: isAdmin(openid) }
 }
 
 function buildTagRankings(pool) {
@@ -640,7 +654,7 @@ async function requestPublish(id, openid) {
     throw new ApiError('INVALID_STATE', '当前状态不能重复提交')
   }
 
-  await consumeRateLimit(openid, 'publish', 10, 24 * 60 * 60 * 1000)
+  await consumeRateLimit(openid, 'publish', isAdmin(openid) ? ADMIN_DAILY_PUBLISH_COUNT : 10, 24 * 60 * 60 * 1000)
 
   await db.collection(MEMES).doc(id).update({
     data: {

@@ -9,6 +9,7 @@ const source = fs.readFileSync(sourcePath, 'utf8')
 const sandbox = {
   Buffer,
   console,
+  process: { env: { ADMIN_OPENIDS: 'admin-openid,second-admin' } },
   exports: {},
   module: { exports: {} },
   require(name) {
@@ -25,8 +26,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -91,6 +92,8 @@ assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'pass' } })
 assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'risky' } }).decision, 'reject')
 assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'review' } }).decision, 'manual')
 assert.strictEqual(moderationResult({ errCode: 0 }, true).decision, 'pass')
+assert.strictEqual(isAdmin('admin-openid'), true)
+assert.strictEqual(isAdmin('unknown-openid'), false)
 
 const rankingPool = Array.from({ length: 12 }, (_, index) => ({
   tags: [`标签${index + 1}`],

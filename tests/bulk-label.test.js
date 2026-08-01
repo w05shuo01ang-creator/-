@@ -3,8 +3,11 @@ const {
   normalizeLabels,
   parseArgs,
   parseModelJson,
+  promptFromFilename,
+  selectBalanced,
   stripJpegMetadata,
   stripPngMetadata,
+  uploadFilename,
   validateDimensions
 } = require('../tools/bulk-label-images')
 
@@ -61,5 +64,21 @@ assert.deepStrictEqual(
 
 assert.throws(() => parseArgs(['images', '--concurrency', '5']), /1 到 4/)
 assert.strictEqual(parseArgs(['images', '--dry-run']).dryRun, true)
+assert.strictEqual(parseArgs(['images', '--prompt-from-filename']).promptFromFilename, true)
+assert.ok(parseArgs(['images', '--export-dir', '../upload']).exportDir.endsWith('upload'))
+assert.strictEqual(promptFromFilename('回答/我真的会谢.jpg'), '我真的会谢')
+assert.match(uploadFilename('回答/开心.jpg', 0, 'image/jpeg'), /^0001_开心_[a-f0-9]{8}\.jpg$/)
+assert.notStrictEqual(
+  uploadFilename('回答/开心.jpg', 0, 'image/jpeg'),
+  uploadFilename('夸奖/开心.jpg', 0, 'image/jpeg')
+)
+
+const balanced = selectBalanced([
+  'root/开心/1.jpg',
+  'root/开心/2.jpg',
+  'root/生气/1.jpg',
+  'root/生气/2.jpg'
+].map(value => require('path').resolve(value)), require('path').resolve('root'), 2)
+assert.strictEqual(new Set(balanced.map(value => require('path').relative(require('path').resolve('root'), value).split(require('path').sep)[0])).size, 2)
 
 console.log('bulk label tests passed')
