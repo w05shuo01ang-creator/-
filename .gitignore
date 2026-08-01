@@ -16,4 +16,6 @@ Thumbs.db
 *.log
 coverage/
 dist/
+/EmojiPackage/
+/memecraft-upload/
 
