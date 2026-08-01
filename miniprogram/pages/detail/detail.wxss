@@ -153,14 +153,19 @@
 .save-button { margin-top: 40rpx; }
 
 .share-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 82rpx;
   margin-top: 16rpx;
+  padding: 0;
   border: 1rpx solid #dfe4ea;
   border-radius: 8rpx;
   background: #ffffff;
   color: #18202a;
   font-size: 28rpx;
-  line-height: 82rpx;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .report-button {

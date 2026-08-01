@@ -1,6 +1,13 @@
 const api = require('../../utils/api')
 const { toMap, patchLike, messageOf } = require('../../utils/view')
 
+function topRankings(items) {
+  return (Array.isArray(items) ? items : []).slice(0, 10).map((item, index) => ({
+    ...item,
+    rankText: String(index + 1).padStart(2, '0')
+  }))
+}
+
 Page({
   data: {
     keyword: '',
@@ -27,7 +34,7 @@ Page({
       const data = await api.getHome()
       this.setData({
         featured: data.featured || [],
-        rankings: data.rankings || [],
+        rankings: topRankings(data.rankings),
         likedMap: toMap(data.likedIds),
         searching: false,
         results: []
@@ -96,4 +103,3 @@ Page({
     }
   }
 })
-

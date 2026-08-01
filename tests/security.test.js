@@ -25,8 +25,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -91,6 +91,16 @@ assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'pass' } })
 assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'risky' } }).decision, 'reject')
 assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'review' } }).decision, 'manual')
 assert.strictEqual(moderationResult({ errCode: 0 }, true).decision, 'pass')
+
+const rankingPool = Array.from({ length: 12 }, (_, index) => ({
+  tags: [`标签${index + 1}`],
+  totalLikes: index + 1
+}))
+const rankings = buildTagRankings(rankingPool)
+assert.strictEqual(rankings.length, 10)
+assert.strictEqual(rankings[0].tag, '标签12')
+assert.strictEqual(rankings[0].totalLikes, 12)
+assert.strictEqual(rankings[9].tag, '标签3')
 
 const uploadMedia = { contentType: validJpeg.mimeType, value: validJpeg.buffer }
 assert.strictEqual(uploadMedia.contentType, 'image/jpeg')

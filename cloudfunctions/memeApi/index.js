@@ -374,24 +374,27 @@ async function bootstrap(openid) {
   return { ownerKey: ownerKey(openid) }
 }
 
+function buildTagRankings(pool) {
+  const tagTotals = {}
+  ;(pool || []).forEach(item => {
+    ;(item.tags || []).forEach(tag => {
+      tagTotals[tag] = (tagTotals[tag] || 0) + (Number(item.totalLikes) || 0)
+    })
+  })
+
+  return Object.keys(tagTotals)
+    .map(tag => ({ tag, totalLikes: tagTotals[tag] }))
+    .sort((left, right) => right.totalLikes - left.totalLikes || left.tag.localeCompare(right.tag, 'zh-CN'))
+    .slice(0, 10)
+}
+
 async function home(openid) {
   const pool = await publicPool()
   const featuredSource = pool
     .slice()
     .sort((left, right) => (right.totalLikes || 0) - (left.totalLikes || 0) || new Date(right.createdAt) - new Date(left.createdAt))
     .slice(0, 12)
-
-  const tagTotals = {}
-  pool.forEach(item => {
-    ;(item.tags || []).forEach(tag => {
-      tagTotals[tag] = (tagTotals[tag] || 0) + (Number(item.totalLikes) || 0)
-    })
-  })
-
-  const rankings = Object.keys(tagTotals)
-    .map(tag => ({ tag, totalLikes: tagTotals[tag] }))
-    .sort((left, right) => right.totalLikes - left.totalLikes)
-    .slice(0, 6)
+  const rankings = buildTagRankings(pool)
 
   return {
     featured: await present(featuredSource),

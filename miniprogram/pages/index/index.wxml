@@ -37,7 +37,7 @@
     <scroll-view class="rank-scroll" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{rankings.length}}">
       <view class="rank-row">
         <view class="rank-item" wx:for="{{rankings}}" wx:key="tag" bindtap="openCategory" data-tag="{{item.tag}}">
-          <text class="rank-index">0{{index + 1}}</text>
+          <text class="rank-index">{{item.rankText}}</text>
           <view class="rank-copy">
             <text class="rank-tag">#{{item.tag}}</text>
             <text class="rank-count">{{item.totalLikes}} 次喜欢</text>
