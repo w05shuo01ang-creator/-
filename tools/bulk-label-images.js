@@ -20,8 +20,11 @@ function usage() {
   --csv <文件>          同时输出便于人工检查的 CSV
   --export-dir <目录>   导出净化后的待上传图片，并生成唯一文件名
   --prompt-from-filename 使用原始文件名作为描述，模型只生成标签
+  --default-tag <标签>    不调用模型，为全部图片设置同一个标签
+  --no-tags              不调用模型，生成允许管理员无标签导入的清单
   --concurrency <数量>  并发请求数，1-4（默认：2）
   --limit <数量>        本次最多处理多少张图片
+  --offset <数量>       跳过排序后的前若干张，用于制作下一批
   --balanced            配合 --limit，按一级目录轮流抽取图片
   --force               忽略已有成功结果并重新分析
   --dry-run             只检查图片，不调用视觉模型
@@ -44,9 +47,12 @@ function parseArgs(argv) {
     else if (argument === '--dry-run') options.dryRun = true
     else if (argument === '--balanced') options.balanced = true
     else if (argument === '--prompt-from-filename') options.promptFromFilename = true
-    else if (['--output', '--csv', '--export-dir', '--concurrency', '--limit'].includes(argument)) {
+    else if (argument === '--no-tags') options.noTags = true
+    else if (['--output', '--csv', '--export-dir', '--concurrency', '--limit', '--offset', '--default-tag'].includes(argument)) {
       if (!argv[index + 1]) throw new Error(`${argument} 缺少参数`)
-      const optionName = argument === '--export-dir' ? 'exportDir' : argument.slice(2)
+      const optionName = argument === '--export-dir'
+        ? 'exportDir'
+        : argument === '--default-tag' ? 'defaultTag' : argument.slice(2)
       options[optionName] = argv[++index]
     } else if (argument.startsWith('--')) {
       throw new Error(`未知选项：${argument}`)
@@ -57,6 +63,15 @@ function parseArgs(argv) {
 
   if (options.help) return options
   if (positional.length !== 1) throw new Error('请提供一个图片目录')
+  if (options.defaultTag !== undefined && options.noTags) {
+    throw new Error('--default-tag 和 --no-tags 不能同时使用')
+  }
+  if (options.defaultTag !== undefined) {
+    options.defaultTag = cleanText(options.defaultTag, 100).replace(/^#+/, '')
+    if (!options.defaultTag || Array.from(options.defaultTag).length > 10) {
+      throw new Error('--default-tag 必须是 1 到 10 个字符')
+    }
+  }
   options.input = path.resolve(positional[0])
   if (options.exportDir) {
     options.exportDir = path.resolve(options.exportDir)
@@ -75,6 +90,8 @@ function parseArgs(argv) {
     options.limit = Number(options.limit)
     if (!Number.isInteger(options.limit) || options.limit < 1) throw new Error('--limit 必须是正整数')
   }
+  options.offset = Number(options.offset || 0)
+  if (!Number.isInteger(options.offset) || options.offset < 0) throw new Error('--offset 必须是非负整数')
   return options
 }
 
@@ -404,16 +421,16 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
   if (!fs.existsSync(options.input) || !fs.statSync(options.input).isDirectory()) {
     throw new Error(`图片目录不存在：${options.input}`)
   }
-  if (!options.dryRun && (!environment.VISION_API_URL || !environment.VISION_API_KEY || !environment.VISION_MODEL)) {
+  const offlineLabels = options.defaultTag !== undefined || options.noTags
+  if (!options.dryRun && !offlineLabels && (!environment.VISION_API_URL || !environment.VISION_API_KEY || !environment.VISION_MODEL)) {
     throw new Error('请先设置 VISION_API_URL、VISION_API_KEY 和 VISION_MODEL；只检查图片可使用 --dry-run')
   }
 
   const manifest = readManifest(options.output)
   const resultByFile = new Map(manifest.items.map(item => [item.file, item]))
   let files = listImages(options.input)
-  if (options.limit) files = options.balanced
-    ? selectBalanced(files, options.input, options.limit)
-    : files.slice(0, options.limit)
+  if (options.balanced) files = selectBalanced(files, options.input, files.length)
+  files = files.slice(options.offset, options.limit ? options.offset + options.limit : undefined)
   console.log(`找到 ${files.length} 张 JPG/PNG 图片`)
 
   await runPool(files, options.concurrency, async (filePath, index) => {
@@ -421,25 +438,33 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
     try {
       const image = prepareImage(filePath)
       const previous = resultByFile.get(relativePath)
-      const prompt = options.promptFromFilename ? promptFromFilename(filePath) : ''
+      const prompt = (options.promptFromFilename || offlineLabels) ? promptFromFilename(filePath) : ''
       const uploadFile = options.exportDir ? uploadFilename(relativePath, index, image.mimeType) : ''
       if (!options.force && previous && previous.status === 'ready' && previous.sha256 === image.sha256) {
         const resumed = {
           ...previous,
           prompt: prompt || previous.prompt,
-          uploadFile: uploadFile || previous.uploadFile || ''
+          uploadFile: uploadFile || previous.uploadFile || '',
+          ...(offlineLabels ? {
+            tags: options.noTags ? [] : [options.defaultTag],
+            ...(options.noTags ? { allowEmptyTags: true } : { allowEmptyTags: false })
+          } : {})
         }
         resultByFile.set(relativePath, resumed)
         if (options.exportDir) exportImage(options.exportDir, uploadFile, image.buffer)
         console.log(`[${index + 1}/${files.length}] 跳过 ${relativePath}`)
         return
       }
-      const labels = options.dryRun ? { prompt: '', tags: [] } : await requestLabels(image, {
-        apiUrl: environment.VISION_API_URL,
-        apiKey: environment.VISION_API_KEY,
-        model: environment.VISION_MODEL,
-        tagsOnly: options.promptFromFilename
-      })
+      const labels = options.dryRun
+        ? { prompt: '', tags: [] }
+        : offlineLabels
+          ? { prompt: '', tags: options.noTags ? [] : [options.defaultTag] }
+          : await requestLabels(image, {
+            apiUrl: environment.VISION_API_URL,
+            apiKey: environment.VISION_API_KEY,
+            model: environment.VISION_MODEL,
+            tagsOnly: options.promptFromFilename
+          })
       if (options.exportDir) exportImage(options.exportDir, uploadFile, image.buffer)
       resultByFile.set(relativePath, {
         file: relativePath,
@@ -452,6 +477,7 @@ async function main(argv = process.argv.slice(2), environment = process.env) {
         metadataRemovedBeforeAnalysis: image.metadataRemoved,
         prompt: prompt || labels.prompt,
         tags: labels.tags,
+        ...(options.noTags ? { allowEmptyTags: true } : {}),
         status: options.dryRun ? 'checked' : 'ready'
       })
       console.log(`[${index + 1}/${files.length}] 完成 ${relativePath}`)

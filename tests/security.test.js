@@ -26,8 +26,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -94,6 +94,8 @@ assert.strictEqual(moderationResult({ errCode: 0, result: { suggest: 'review' } 
 assert.strictEqual(moderationResult({ errCode: 0 }, true).decision, 'pass')
 assert.strictEqual(isAdmin('admin-openid'), true)
 assert.strictEqual(isAdmin('unknown-openid'), false)
+assert.deepStrictEqual(Array.from(cleanTags([], false)), ['表情包'])
+assert.deepStrictEqual(Array.from(cleanTags([], true)), [])
 
 const rankingPool = Array.from({ length: 12 }, (_, index) => ({
   tags: [`标签${index + 1}`],

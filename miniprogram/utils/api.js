@@ -43,7 +43,7 @@ function prepareImage(filePath) {
   })
 }
 
-async function uploadMeme({ filePath, prompt, tags }) {
+async function uploadMeme({ filePath, prompt, tags, allowEmptyTags = false }) {
   const session = await bootstrap()
   const preparedPath = await prepareImage(filePath)
   const cloudPath = [
@@ -54,7 +54,7 @@ async function uploadMeme({ filePath, prompt, tags }) {
 
   const uploaded = await wx.cloud.uploadFile({ cloudPath, filePath: preparedPath })
   try {
-    return await call('create', { fileID: uploaded.fileID, prompt, tags })
+    return await call('create', { fileID: uploaded.fileID, prompt, tags, allowEmptyTags })
   } catch (error) {
     wx.cloud.deleteFile({ fileList: [uploaded.fileID] }).catch(() => {})
     throw error

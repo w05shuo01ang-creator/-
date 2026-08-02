@@ -17,6 +17,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_IMAGE_EDGE = 4096
 const MAX_IMAGE_PIXELS = 16 * 1024 * 1024
 const MAX_USER_MEMES = 100
+const MAX_ADMIN_MEMES = 2000
 const DAILY_UPLOAD_COUNT = 10
 const DAILY_UPLOAD_BYTES = 25 * 1024 * 1024
 const ADMIN_DAILY_UPLOAD_COUNT = 100
@@ -64,14 +65,14 @@ function cleanText(value, maxLength) {
   return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, maxLength)
 }
 
-function cleanTags(value) {
+function cleanTags(value, allowEmpty = false) {
   const input = Array.isArray(value) ? value : []
   const tags = []
   input.forEach(item => {
     const tag = cleanText(item, 10).replace(/^#+/, '')
     if (tag && !tags.includes(tag) && tags.length < 5) tags.push(tag)
   })
-  return tags.length ? tags : ['表情包']
+  return tags.length ? tags : allowEmpty ? [] : ['表情包']
 }
 
 function readJpegInfo(buffer) {
@@ -493,8 +494,9 @@ async function create(payload, openid) {
   }
 
   const ownedCount = await db.collection(MEMES).where({ _openid: openid }).count()
-  if (ownedCount.total >= MAX_USER_MEMES) {
-    throw new ApiError('STORAGE_LIMITED', `每个账号最多保留 ${MAX_USER_MEMES} 张表情`)
+  const maximumOwned = isAdmin(openid) ? MAX_ADMIN_MEMES : MAX_USER_MEMES
+  if (ownedCount.total >= maximumOwned) {
+    throw new ApiError('STORAGE_LIMITED', `每个账号最多保留 ${maximumOwned} 张表情`)
   }
 
   const downloaded = await cloud.downloadFile({ fileID })
@@ -517,7 +519,8 @@ async function create(payload, openid) {
   }
   await consumeUploadQuota(openid, inspected.fileSize)
 
-  const tags = cleanTags(payload.tags)
+  const allowEmptyTags = isAdmin(openid) && payload.allowEmptyTags === true
+  const tags = cleanTags(payload.tags, allowEmptyTags)
   const prompt = cleanText(payload.prompt, 60) || tags.join(' ')
   const now = db.serverDate()
   const result = await db.collection(MEMES).add({

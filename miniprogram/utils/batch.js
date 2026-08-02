@@ -37,10 +37,11 @@ function parseBatchManifest(text) {
     if (names.has(key)) throw new Error(`清单中存在重复文件名：${uploadFile}`)
     const prompt = cleanText(item.prompt, 60)
     const tags = cleanTags(item.tags)
+    const allowEmptyTags = item.allowEmptyTags === true
     if (!prompt) throw new Error(`图片 ${uploadFile} 缺少描述`)
-    if (!tags.length) throw new Error(`图片 ${uploadFile} 缺少标签`)
+    if (!tags.length && !allowEmptyTags) throw new Error(`图片 ${uploadFile} 缺少标签`)
     names.add(key)
-    items.push({ uploadFile, prompt, tags })
+    items.push({ uploadFile, prompt, tags, allowEmptyTags })
   })
   if (!items.length) throw new Error('清单中没有可上传的 ready 图片')
   return items

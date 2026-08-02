@@ -19,6 +19,17 @@ const matched = matchBatchFiles([
 assert.strictEqual(matched[0].prompt, '开心')
 assert.strictEqual(matched[0].filePath, 'wxfile://tmp/image.jpg')
 
+const tagless = parseBatchManifest(JSON.stringify({
+  version: 1,
+  items: [{ uploadFile: '0002_tagless.png', prompt: '无标签表情', tags: [], allowEmptyTags: true, status: 'ready' }]
+}))
+assert.deepStrictEqual(tagless[0].tags, [])
+assert.strictEqual(tagless[0].allowEmptyTags, true)
+assert.throws(() => parseBatchManifest(JSON.stringify({
+  version: 1,
+  items: [{ uploadFile: '0003_invalid.png', prompt: '无标签表情', tags: [], status: 'ready' }]
+})), /缺少标签/)
+
 assert.throws(() => parseBatchManifest('{bad json'), /JSON/)
 assert.throws(() => parseBatchManifest(JSON.stringify({
   version: 1,

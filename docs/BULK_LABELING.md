@@ -63,6 +63,40 @@ JSON 适合后续程序读取，CSV 适合用 Excel 人工检查和修改。输�
 
 仓库根目录的 `EmojiPackage/` 只作为本地素材源，不会提交到 MemeCraft 的 Git 仓库。当前可处理其中 1775 张 JPG/PNG；GIF 和 WebP 会自动跳过。
 
+### 不使用 AI，统一打一个标签
+
+下面的命令保留原图片文件名作为描述，给本批图片统一设置“基础表情”标签，不需要配置任何视觉模型密钥：
+
+```powershell
+node tools/bulk-label-images.js ".\EmojiPackage" `
+  --prompt-from-filename `
+  --default-tag "基础表情" `
+  --export-dir ".\memecraft-upload" `
+  --output ".\memecraft-upload\memecraft-labels.json" `
+  --limit 100 `
+  --balanced
+```
+
+标签必须为 1 到 10 个字符。每次最多准备 100 张，导入完成后可删除 `memecraft-upload`，再调整素材或输出目录制作下一批。
+
+制作第二批时增加 `--offset 100`，第三批使用 `--offset 200`，依次递增。建议每批放进独立子目录，例如 `--export-dir ".\memecraft-upload\batch-002"`，并让 `--output` 指向同一子目录中的 JSON，避免和上一批混在一起。
+
+### 不打标签
+
+如需无标签发布，将 `--default-tag "基础表情"` 换成 `--no-tags`：
+
+```powershell
+node tools/bulk-label-images.js ".\EmojiPackage" `
+  --prompt-from-filename `
+  --no-tags `
+  --export-dir ".\memecraft-upload" `
+  --output ".\memecraft-upload\memecraft-labels.json" `
+  --limit 100 `
+  --balanced
+```
+
+无标签能力只对云函数 `ADMIN_OPENIDS` 中配置的管理员生效；普通用户即使伪造参数，云端仍会补上默认“表情包”标签。
+
 建议先制作 100 张基础内容。导出目录必须位于 `EmojiPackage/` 外部：
 
 ```powershell
@@ -88,7 +122,7 @@ node tools/bulk-label-images.js ".\EmojiPackage" `
 2. 选择同一导出目录中的 JPG/PNG，单批最多 100 张。
 3. 确认后保持页面打开；小程序会逐张上传并自动提交微信内容审核。
 
-批量按钮只对云函数环境变量 `ADMIN_OPENIDS` 中配置的账号显示。每个账号仍最多保留 100 张；管理员每天可上传和提交审核 100 张，普通用户仍为每天 10 张。
+批量按钮只对云函数环境变量 `ADMIN_OPENIDS` 中配置的账号显示。普通账号最多保留 100 张；管理员最多保留 2000 张，每天可上传和提交审核 100 张，普通用户仍为每天 10 张。这个限制允许管理员分批建立基础图库，同时避免单日突发上传和审核成本失控。
 
 ## 风险边界
 

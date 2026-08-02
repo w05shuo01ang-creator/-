@@ -191,7 +191,8 @@ Page({
           const created = await api.uploadMeme({
             filePath: item.filePath,
             prompt: item.prompt,
-            tags: item.tags
+            tags: item.tags,
+            allowEmptyTags: item.allowEmptyTags
           })
           uploaded++
           this.setData({ batchProgress: `正在审核 ${index + 1}/${items.length}` })
