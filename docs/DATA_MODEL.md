@@ -16,6 +16,7 @@
   tags: String[],
   tagLikes: Object,
   totalLikes: Number,
+  dailyLikeDeltas: Object, // 中国标准时间日期 -> 当日净新增点赞，只保留最近 8 天
   isPublic: Boolean,
   reviewStatus: "private" | "auto_reviewing" | "manual_review" | "approved" | "rejected",
   moderation: Object,

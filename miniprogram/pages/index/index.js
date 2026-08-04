@@ -1,6 +1,6 @@
 const api = require('../../utils/api')
 const { toMap, patchLike, messageOf } = require('../../utils/view')
-const HOME_CACHE_KEY = 'memecraft-home-v1'
+const HOME_CACHE_KEY = 'memecraft-home-v2'
 const HOME_CACHE_TTL = 5 * 60 * 1000
 
 function topRankings(items) {

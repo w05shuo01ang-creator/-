@@ -27,6 +27,8 @@ const ADMIN_DAILY_PUBLISH_COUNT = 100
 const DEFAULT_GLOBAL_DAILY_UPLOAD_COUNT = 500
 const DEFAULT_GLOBAL_DAILY_UPLOAD_BYTES = 1024 * 1024 * 1024
 const HOME_CACHE_TTL = 30 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000
 let homeCache = null
 
 class ApiError extends Error {
@@ -478,13 +480,59 @@ function buildTagRankings(pool) {
     .slice(0, 10)
 }
 
+function chinaDayKey(timestamp = Date.now(), dayOffset = 0) {
+  const value = timestamp instanceof Date ? timestamp.getTime() : Number(timestamp)
+  const safeTimestamp = Number.isFinite(value) ? value : Date.now()
+  return new Date(safeTimestamp + CHINA_TIME_OFFSET_MS + dayOffset * DAY_MS).toISOString().slice(0, 10)
+}
+
+function updateDailyLikeDeltas(value, delta, timestamp = Date.now()) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const key = chinaDayKey(timestamp)
+  const next = {}
+  Object.keys(source)
+    .filter(item => /^\d{4}-\d{2}-\d{2}$/.test(item))
+    .sort()
+    .slice(-7)
+    .forEach(item => { next[item] = Number(source[item]) || 0 })
+  next[key] = (Number(next[key]) || 0) + delta
+  return next
+}
+
+function selectFeatured(pool, timestamp = Date.now(), limit = 12) {
+  const items = Array.from(new Map((Array.isArray(pool) ? pool : [])
+    .filter(item => item && item._id)
+    .map(item => [item._id, item])).values())
+  const yesterday = chinaDayKey(timestamp, -1)
+  const trending = items
+    .filter(item => (Number(item.dailyLikeDeltas && item.dailyLikeDeltas[yesterday]) || 0) > 0)
+    .sort((left, right) => {
+      const delta = (Number(right.dailyLikeDeltas[yesterday]) || 0) - (Number(left.dailyLikeDeltas[yesterday]) || 0)
+      return delta || (Number(right.totalLikes) || 0) - (Number(left.totalLikes) || 0)
+    })
+    .slice(0, 5)
+  const reserved = new Set(trending.map(item => item._id))
+  const latest = items
+    .filter(item => !reserved.has(item._id))
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 4)
+  latest.forEach(item => reserved.add(item._id))
+  const random = items
+    .filter(item => !reserved.has(item._id))
+    .sort((left, right) => digest(`featured:${chinaDayKey(timestamp)}:${left._id}`).localeCompare(digest(`featured:${chinaDayKey(timestamp)}:${right._id}`)))
+    .slice(0, 3)
+  const selected = trending.concat(random, latest)
+  const selectedIds = new Set(selected.map(item => item._id))
+  const remainder = items
+    .filter(item => !selectedIds.has(item._id))
+    .sort((left, right) => digest(`featured-fill:${chinaDayKey(timestamp)}:${left._id}`).localeCompare(digest(`featured-fill:${chinaDayKey(timestamp)}:${right._id}`)))
+  return selected.concat(remainder).slice(0, Math.max(1, Math.min(30, Number(limit) || 12)))
+}
+
 async function home(openid) {
   if (!homeCache || homeCache.expiresAt <= Date.now()) {
     const pool = await publicPool()
-    const featuredSource = pool
-      .slice()
-      .sort((left, right) => (right.totalLikes || 0) - (left.totalLikes || 0) || new Date(right.createdAt) - new Date(left.createdAt))
-      .slice(0, 12)
+    const featuredSource = selectFeatured(pool)
     homeCache = {
       expiresAt: Date.now() + HOME_CACHE_TTL,
       featured: await present(featuredSource),
@@ -802,8 +850,9 @@ async function toggleLike(id, openid) {
 
     const current = Math.max(0, Number(item.totalLikes) || 0)
     const totalLikes = exists ? Math.max(0, current - 1) : current + 1
+    const dailyLikeDeltas = updateDailyLikeDeltas(item.dailyLikeDeltas, exists ? -1 : 1)
     await transaction.collection(MEMES).doc(id).update({
-      data: { totalLikes, updatedAt: db.serverDate() }
+      data: { totalLikes, dailyLikeDeltas, updatedAt: db.serverDate() }
     })
 
     if (exists) {

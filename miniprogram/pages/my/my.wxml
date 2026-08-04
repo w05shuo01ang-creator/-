@@ -1,9 +1,6 @@
 <view class="page">
   <view class="account-head">
-    <view>
-      <text class="head-title">我的表情</text>
-      <text class="head-sub">已加载 {{items.length}} / {{totalItems}} 张 · 按状态和标签管理</text>
-    </view>
+    <text class="head-title">个人舱</text>
   </view>
 
   <view class="head-actions">
@@ -61,7 +58,10 @@
     </view>
   </view>
 
-  <button class="load-more" wx:if="{{hasMore}}" bindtap="loadMore" loading="{{loadingMore}}" disabled="{{loadingMore}}">加载更多表情</button>
+  <view class="load-more {{loadingMore ? 'loading' : ''}}" wx:if="{{hasMore}}" bindtap="loadMore" aria-role="button" aria-label="加载更多表情">
+    <view class="load-more-spinner" wx:if="{{loadingMore}}"></view>
+    <text>{{loadingMore ? '正在加载' : '加载更多表情'}}</text>
+  </view>
 
   <view class="empty" wx:if="{{!loading && !filtered.length}}">
     <text class="empty-title">{{searchQuery || activeTag ? '没有匹配的表情' : '这里还没有表情'}}</text>

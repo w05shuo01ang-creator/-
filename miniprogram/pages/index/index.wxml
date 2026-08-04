@@ -32,7 +32,6 @@
   <block wx:else>
     <view class="section-head" wx:if="{{rankings.length}}">
       <text class="section-title">正在流行</text>
-      <text class="section-note">按真实点赞统计</text>
     </view>
     <scroll-view class="rank-scroll" scroll-x enhanced show-scrollbar="{{false}}" wx:if="{{rankings.length}}">
       <view class="rank-row">
@@ -48,7 +47,6 @@
 
     <view class="section-head">
       <text class="section-title">精选表情</text>
-      <text class="section-note">最近更新</text>
     </view>
     <view class="card-grid" wx:if="{{featured.length}}">
       <meme-card wx:for="{{featured}}" wx:key="_id" item="{{item}}" liked="{{likedMap[item._id]}}" bind:open="openDetail" bind:like="toggleLike" />

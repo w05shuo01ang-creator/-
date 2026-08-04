@@ -27,8 +27,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -112,6 +112,25 @@ assert.strictEqual(rankings.length, 10)
 assert.strictEqual(rankings[0].tag, '标签12')
 assert.strictEqual(rankings[0].totalLikes, 12)
 assert.strictEqual(rankings[9].tag, '标签3')
+
+const featuredNow = Date.UTC(2026, 7, 4, 4)
+assert.strictEqual(chinaDayKey(featuredNow), '2026-08-04')
+assert.strictEqual(chinaDayKey(featuredNow, -1), '2026-08-03')
+assert.deepStrictEqual(JSON.parse(JSON.stringify(updateDailyLikeDeltas({ '2026-08-03': 2 }, 1, featuredNow))), {
+  '2026-08-03': 2,
+  '2026-08-04': 1
+})
+const featuredPool = Array.from({ length: 15 }, (_, index) => ({
+  _id: `meme-${index + 1}`,
+  totalLikes: index,
+  dailyLikeDeltas: index < 6 ? { '2026-08-03': index + 1 } : {},
+  createdAt: new Date(featuredNow - index * 1000)
+}))
+const featured = selectFeatured(featuredPool, featuredNow)
+assert.strictEqual(featured.length, 12)
+assert.strictEqual(new Set(featured.map(item => item._id)).size, 12)
+assert.deepStrictEqual(Array.from(featured.slice(0, 5), item => item._id), ['meme-6', 'meme-5', 'meme-4', 'meme-3', 'meme-2'])
+assert.deepStrictEqual(Array.from(featured.slice(8, 12), item => item._id), ['meme-1', 'meme-7', 'meme-8', 'meme-9'])
 
 const uploadMedia = { contentType: validJpeg.mimeType, value: validJpeg.buffer }
 assert.strictEqual(uploadMedia.contentType, 'image/jpeg')

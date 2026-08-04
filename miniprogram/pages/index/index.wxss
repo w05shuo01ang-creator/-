@@ -70,11 +70,6 @@
   font-size: 38rpx;
 }
 
-.section-note {
-  color: #77808c;
-  font-size: 24rpx;
-}
-
 .rank-scroll {
   width: 100%;
   white-space: nowrap;
