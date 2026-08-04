@@ -529,6 +529,12 @@ function selectFeatured(pool, timestamp = Date.now(), limit = 12) {
   return selected.concat(remainder).slice(0, Math.max(1, Math.min(30, Number(limit) || 12)))
 }
 
+function stableRandomOrder(items, seed = chinaDayKey()) {
+  return (Array.isArray(items) ? items : [])
+    .slice()
+    .sort((left, right) => digest(`list:${seed}:${left._id}`).localeCompare(digest(`list:${seed}:${right._id}`)))
+}
+
 async function home(openid) {
   if (!homeCache || homeCache.expiresAt <= Date.now()) {
     const pool = await publicPool()
@@ -553,7 +559,9 @@ async function list(openid, payload) {
   const tag = cleanText(payload.tag, 10)
   const query = cleanText(payload.query, 30)
   const pool = await publicPool()
-  const filtered = pool.filter(item => matches(item, tag, query))
+  const matching = pool.filter(item => matches(item, tag, query))
+  const randomSeed = cleanText(payload.randomSeed, 64) || chinaDayKey()
+  const filtered = payload.randomOrder === true ? stableRandomOrder(matching, randomSeed) : matching
   const selected = filtered.slice(offset, offset + limit)
 
   return {

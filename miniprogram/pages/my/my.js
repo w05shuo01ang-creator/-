@@ -104,10 +104,12 @@ Page({
     this.setData({ loading: true })
     try {
       const data = await api.getMine({ offset: 0, limit: 30 })
+      const items = data.items || []
+      const totalItems = Number(data.total) || 0
       this.setData({
-        items: data.items || [],
-        totalItems: Number(data.total) || 0,
-        hasMore: data.hasMore === true,
+        items,
+        totalItems,
+        hasMore: data.hasMore === true && items.length < totalItems,
         batchUploadEnabled: data.batchUploadEnabled === true
       })
       this.lastLoadedAt = Date.now()
@@ -141,10 +143,12 @@ Page({
       const data = await api.getMine({ offset: this.data.items.length, limit: 30 })
       const existingIds = new Set(this.data.items.map(item => item._id))
       const additions = (data.items || []).filter(item => !existingIds.has(item._id))
+      const items = this.data.items.concat(additions)
+      const totalItems = Number(data.total) || this.data.totalItems
       this.setData({
-        items: this.data.items.concat(additions),
-        totalItems: Number(data.total) || this.data.totalItems,
-        hasMore: data.hasMore === true
+        items,
+        totalItems,
+        hasMore: additions.length > 0 && data.hasMore === true && items.length < totalItems
       })
       this.filterItems()
     } catch (error) {

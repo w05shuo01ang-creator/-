@@ -58,7 +58,7 @@
     </view>
   </view>
 
-  <view class="load-more {{loadingMore ? 'loading' : ''}}" wx:if="{{hasMore}}" bindtap="loadMore" aria-role="button" aria-label="加载更多表情">
+  <view class="load-more {{loadingMore ? 'loading' : ''}}" wx:if="{{hasMore && items.length < totalItems}}" bindtap="loadMore" aria-role="button" aria-label="加载更多表情">
     <view class="load-more-spinner" wx:if="{{loadingMore}}"></view>
     <text>{{loadingMore ? '正在加载' : '加载更多表情'}}</text>
   </view>

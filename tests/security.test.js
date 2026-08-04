@@ -27,8 +27,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -131,6 +131,10 @@ assert.strictEqual(featured.length, 12)
 assert.strictEqual(new Set(featured.map(item => item._id)).size, 12)
 assert.deepStrictEqual(Array.from(featured.slice(0, 5), item => item._id), ['meme-6', 'meme-5', 'meme-4', 'meme-3', 'meme-2'])
 assert.deepStrictEqual(Array.from(featured.slice(8, 12), item => item._id), ['meme-1', 'meme-7', 'meme-8', 'meme-9'])
+const randomOrder = Array.from(stableRandomOrder(featuredPool, '2026-08-04'), item => item._id)
+assert.deepStrictEqual(Array.from(stableRandomOrder(featuredPool, '2026-08-04'), item => item._id), randomOrder)
+assert.notDeepStrictEqual(Array.from(stableRandomOrder(featuredPool, '2026-08-05'), item => item._id), randomOrder)
+assert.strictEqual(new Set(randomOrder).size, featuredPool.length)
 
 const uploadMedia = { contentType: validJpeg.mimeType, value: validJpeg.buffer }
 assert.strictEqual(uploadMedia.contentType, 'image/jpeg')

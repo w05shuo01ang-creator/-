@@ -49,11 +49,17 @@ Page({
   async load(reset) {
     if (this.data.loading) return
     const offset = reset ? 0 : this.data.offset
+    const randomSeed = reset || !this.randomSeed
+      ? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      : this.randomSeed
+    this.randomSeed = randomSeed
     this.setData({ loading: true })
     try {
       const data = await api.listMemes({
         tag: this.data.selected === '全部' ? '' : this.data.selected,
         query: this.data.keyword.trim(),
+        randomOrder: true,
+        randomSeed,
         offset,
         limit: 20
       })
@@ -86,4 +92,3 @@ Page({
     }
   }
 })
-
