@@ -13,7 +13,6 @@ const RATE_LIMITS = 'rate_limits'
 const MODERATION_AUDITS = 'moderation_audits'
 const REPORTS = 'reports'
 const BLOCKED_USERS = 'blocked_users'
-const MEME_HASHES = 'meme_hashes'
 const MAX_PAGE_SIZE = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_IMAGE_EDGE = 4096
@@ -25,6 +24,8 @@ const DAILY_UPLOAD_BYTES = 25 * 1024 * 1024
 const ADMIN_DAILY_UPLOAD_COUNT = 100
 const ADMIN_DAILY_UPLOAD_BYTES = 250 * 1024 * 1024
 const ADMIN_DAILY_PUBLISH_COUNT = 100
+const DEFAULT_GLOBAL_DAILY_UPLOAD_COUNT = 500
+const DEFAULT_GLOBAL_DAILY_UPLOAD_BYTES = 1024 * 1024 * 1024
 const HOME_CACHE_TTL = 30 * 1000
 let homeCache = null
 
@@ -55,6 +56,17 @@ function isAdmin(openid) {
     .map(value => value.trim())
     .filter(Boolean)
     .includes(openid)
+}
+
+function globalUploadLimits(environment = process.env) {
+  const count = Number(environment.GLOBAL_DAILY_UPLOAD_COUNT)
+  const bytes = Number(environment.GLOBAL_DAILY_UPLOAD_BYTES)
+  return {
+    count: Number.isInteger(count) && count >= 100 && count <= 10000 ? count : DEFAULT_GLOBAL_DAILY_UPLOAD_COUNT,
+    bytes: Number.isInteger(bytes) && bytes >= 100 * 1024 * 1024 && bytes <= 20 * 1024 * 1024 * 1024
+      ? bytes
+      : DEFAULT_GLOBAL_DAILY_UPLOAD_BYTES
+  }
 }
 
 function cleanId(value) {
@@ -280,13 +292,22 @@ async function consumeUploadQuota(openid, fileSize) {
   const maximumBytes = admin ? ADMIN_DAILY_UPLOAD_BYTES : DAILY_UPLOAD_BYTES
   const day = new Date().toISOString().slice(0, 10)
   const id = digest(`upload:${openid}:${day}`)
+  const globalId = digest(`upload:global:${day}`)
+  const globalMaximum = globalUploadLimits()
   return db.runTransaction(async transaction => {
     let usage = { count: 0, bytes: 0 }
+    let globalUsage = { count: 0, bytes: 0 }
     try {
       const result = await transaction.collection(RATE_LIMITS).doc(id).get()
       usage = result.data || usage
     } catch (error) {
       usage = { count: 0, bytes: 0 }
+    }
+    try {
+      const result = await transaction.collection(RATE_LIMITS).doc(globalId).get()
+      globalUsage = result.data || globalUsage
+    } catch (error) {
+      globalUsage = { count: 0, bytes: 0 }
     }
 
     if ((Number(usage.count) || 0) + 1 > maximumCount) {
@@ -294,6 +315,9 @@ async function consumeUploadQuota(openid, fileSize) {
     }
     if ((Number(usage.bytes) || 0) + fileSize > maximumBytes) {
       throw new ApiError('UPLOAD_LIMITED', '今日上传容量已用完')
+    }
+    if ((Number(globalUsage.count) || 0) + 1 > globalMaximum.count || (Number(globalUsage.bytes) || 0) + fileSize > globalMaximum.bytes) {
+      throw new ApiError('SERVICE_UPLOAD_LIMITED', '今日上传服务已达安全上限，请明天再试')
     }
 
     await transaction.collection(RATE_LIMITS).doc(id).set({
@@ -307,66 +331,16 @@ async function consumeUploadQuota(openid, fileSize) {
         updatedAt: db.serverDate()
       }
     })
-  })
-}
-
-async function claimContentHash(contentHash, openid) {
-  const claimToken = digest(`claim:${openid}:${contentHash}:${Date.now()}:${Math.random()}`)
-  await db.runTransaction(async transaction => {
-    const reference = transaction.collection(MEME_HASHES).doc(contentHash)
-    let existing = null
-    try {
-      const result = await reference.get()
-      existing = result.data || null
-    } catch (error) {
-      existing = null
-    }
-    if (!canReplaceHashClaim(existing)) throw new ApiError('DUPLICATE_IMAGE', '该图片已存在，请勿重复上传')
-    await reference.set({
+    await transaction.collection(RATE_LIMITS).doc(globalId).set({
       data: {
-        contentHash,
-        ownerKey: ownerKey(openid),
-        claimToken,
-        status: 'reserved',
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-        createdAt: db.serverDate(),
+        action: 'global_upload',
+        day,
+        count: (Number(globalUsage.count) || 0) + 1,
+        bytes: (Number(globalUsage.bytes) || 0) + fileSize,
+        expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         updatedAt: db.serverDate()
       }
     })
-  })
-  return claimToken
-}
-
-function canReplaceHashClaim(existing, now = Date.now()) {
-  if (!existing) return true
-  return existing.status === 'reserved' && new Date(existing.expiresAt).getTime() <= now
-}
-
-async function releaseContentHash(contentHash, claimToken) {
-  try {
-    const reference = db.collection(MEME_HASHES).doc(contentHash)
-    const result = await reference.get()
-    if (result.data && result.data.claimToken === claimToken && result.data.status === 'reserved') {
-      await reference.remove()
-    }
-  } catch (error) {
-    console.error('failed to release content hash', { contentHash, error })
-  }
-}
-
-async function activateContentHash(contentHash, claimToken, memeId) {
-  const reference = db.collection(MEME_HASHES).doc(contentHash)
-  const result = await reference.get()
-  if (!result.data || result.data.claimToken !== claimToken) {
-    throw new Error('content hash claim was lost')
-  }
-  await reference.update({
-    data: {
-      memeId,
-      status: 'active',
-      expiresAt: command.remove(),
-      updatedAt: db.serverDate()
-    }
   })
 }
 
@@ -600,6 +574,7 @@ async function detail(id, openid) {
 }
 
 async function create(payload, openid) {
+  await consumeRateLimit(openid, 'create', isAdmin(openid) ? 60 : 10, 60 * 1000)
   const fileID = String(payload.fileID || '')
   const expectedPath = `/uploads/${ownerKey(openid)}/`
   if (!fileID.startsWith('cloud://') || !fileID.includes(expectedPath)) {
@@ -630,28 +605,20 @@ async function create(payload, openid) {
     safeFileID = replaced.fileID || fileID
   }
   const duplicate = await db.collection(MEMES)
-    .where({ contentHash: inspected.contentHash })
+    .where({ _openid: openid, contentHash: inspected.contentHash })
     .limit(1)
     .get()
   if (duplicate.data && duplicate.data.length) {
-    throw new ApiError('DUPLICATE_IMAGE', '该图片已存在，请勿重复上传')
+    throw new ApiError('DUPLICATE_IMAGE', '这张图片已经上传过了')
   }
-  const claimToken = await claimContentHash(inspected.contentHash, openid)
-  try {
-    await consumeUploadQuota(openid, inspected.fileSize)
-  } catch (error) {
-    await releaseContentHash(inspected.contentHash, claimToken)
-    throw error
-  }
+  await consumeUploadQuota(openid, inspected.fileSize)
 
   const allowEmptyTags = isAdmin(openid) && payload.allowEmptyTags === true
   const tags = cleanTags(payload.tags, allowEmptyTags)
   const prompt = cleanText(payload.prompt, 60) || tags.join(' ')
   const now = db.serverDate()
-  let result
-  try {
-    result = await db.collection(MEMES).add({
-      data: {
+  const result = await db.collection(MEMES).add({
+    data: {
       _openid: openid,
       fileID: safeFileID,
       contentHash: inspected.contentHash,
@@ -667,17 +634,8 @@ async function create(payload, openid) {
       reviewStatus: 'private',
       createdAt: now,
       updatedAt: now
-      }
-    })
-  } catch (error) {
-    await releaseContentHash(inspected.contentHash, claimToken)
-    throw error
-  }
-  try {
-    await activateContentHash(inspected.contentHash, claimToken, result._id)
-  } catch (error) {
-    console.error('failed to activate content hash', { contentHash: inspected.contentHash, memeId: result._id, error })
-  }
+    }
+  })
   return { id: result._id }
 }
 
@@ -814,17 +772,6 @@ async function remove(id, openid) {
     db.collection(LIKES).where({ memeId: id }).remove(),
     db.collection(TAG_LIKES).where({ memeId: id }).remove()
   ])
-  if (item.contentHash) {
-    try {
-      const hashResult = await db.collection(MEME_HASHES).doc(item.contentHash).get()
-      if (hashResult.data && hashResult.data.memeId === id) {
-        await db.collection(MEME_HASHES).doc(item.contentHash).remove()
-      }
-    } catch (error) {
-      console.error('failed to release active content hash', { id, contentHash: item.contentHash, error })
-    }
-  }
-
   if (item.fileID && item.fileID.startsWith('cloud://')) {
     try {
       await cloud.deleteFile({ fileList: [item.fileID] })
