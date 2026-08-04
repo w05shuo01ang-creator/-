@@ -310,40 +310,11 @@
 .action.primary { color: #165dff; }
 .action.danger { color: #f04458; }
 
-.load-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  width: auto;
-  height: 72rpx;
-  margin: 0 30rpx 60rpx;
-  padding: 0 24rpx;
-  border: 1rpx solid #dfe4ea;
-  border-radius: 7rpx;
-  background: #ffffff;
-  color: #18202a;
-  font-size: 24rpx;
-  line-height: 1;
-  box-sizing: border-box;
-}
-
-.load-more.loading {
+.list-status {
+  padding: 8rpx 0 52rpx;
   color: #77808c;
-}
-
-.load-more-spinner {
-  width: 24rpx;
-  height: 24rpx;
-  border: 3rpx solid #dfe4ea;
-  border-top-color: #59636f;
-  border-radius: 50%;
-  animation: load-more-spin 0.75s linear infinite;
-  box-sizing: border-box;
-}
-
-@keyframes load-more-spin {
-  to { transform: rotate(360deg); }
+  font-size: 24rpx;
+  text-align: center;
 }
 
 .mask {

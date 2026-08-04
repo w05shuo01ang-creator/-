@@ -100,6 +100,12 @@ Page({
     wx.stopPullDownRefresh()
   },
 
+  onReachBottom() {
+    if (this.data.hasMore && this.data.items.length < this.data.totalItems && !this.data.loadingMore) {
+      this.loadMore()
+    }
+  },
+
   async load() {
     this.setData({ loading: true })
     try {
@@ -137,7 +143,7 @@ Page({
   },
 
   async loadMore() {
-    if (!this.data.hasMore || this.data.loadingMore) return
+    if (!this.data.hasMore || this.data.items.length >= this.data.totalItems || this.data.loadingMore) return
     this.setData({ loadingMore: true })
     try {
       const data = await api.getMine({ offset: this.data.items.length, limit: 30 })

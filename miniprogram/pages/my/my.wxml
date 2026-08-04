@@ -58,16 +58,13 @@
     </view>
   </view>
 
-  <view class="load-more {{loadingMore ? 'loading' : ''}}" wx:if="{{hasMore && items.length < totalItems}}" bindtap="loadMore" aria-role="button" aria-label="加载更多表情">
-    <view class="load-more-spinner" wx:if="{{loadingMore}}"></view>
-    <text>{{loadingMore ? '正在加载' : '加载更多表情'}}</text>
-  </view>
-
   <view class="empty" wx:if="{{!loading && !filtered.length}}">
     <text class="empty-title">{{searchQuery || activeTag ? '没有匹配的表情' : '这里还没有表情'}}</text>
     <text>{{searchQuery || activeTag ? '换一个关键词或标签试试' : currentTab === 'private' ? '上传后会默认保存在私密区' : currentTab === 'review' ? '待审核和被拒绝的内容会显示在这里' : '审核通过的内容会显示在这里'}}</text>
   </view>
   <view class="loading" wx:if="{{loading}}">正在整理...</view>
+  <view class="list-status" wx:if="{{loadingMore}}">正在加载...</view>
+  <view class="list-status" wx:elif="{{filtered.length && !hasMore}}">已经到底了</view>
 
   <view class="mask" wx:if="{{showUpload}}" bindtap="hideUpload">
     <view class="sheet" catchtap="stopBubble">
