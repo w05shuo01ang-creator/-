@@ -28,6 +28,24 @@
 
 存储每日上传次数/字节数及点赞、举报、发布等窗口计数。`expiresAt` 可用于定期清理过期记录。
 
+## meme_hashes
+
+```js
+{
+  _id: String,          // 净化后图片的 SHA-256
+  contentHash: String,
+  ownerKey: String,     // OpenID 的不可逆摘要
+  claimToken: String,
+  status: "reserved" | "active",
+  memeId: String,
+  expiresAt: Date,      // 仅 reserved 状态使用
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+该集合只允许云函数访问。`reserved` 超过 30 分钟后可由下一次同哈希上传覆盖；`active` 在对应表情删除后移除。
+
 ## moderation_audits
 
 保存审核来源、决策、原因、接口返回码、匿名化所有者标识和时间。不要保存原始 OpenID 或图片内容。

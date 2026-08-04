@@ -1,6 +1,6 @@
 .hero {
   padding: 44rpx 30rpx 34rpx;
-  background: #ffffff;
+  background: #f8faf9;
   border-bottom: 1rpx solid #e6e9ee;
 }
 
@@ -134,4 +134,3 @@
   gap: 18rpx;
   padding: 0 30rpx 48rpx;
 }
-

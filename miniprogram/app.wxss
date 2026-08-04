@@ -3,7 +3,8 @@ page {
   --muted: #77808c;
   --line: #e6e9ee;
   --surface: #ffffff;
-  --canvas: #f4f6f8;
+  --canvas: #f1f4f3;
+  --canvas-soft: #f8faf9;
   --primary: #165dff;
   --coral: #f04458;
   --green: #168a55;
@@ -76,4 +77,3 @@ button::after {
   background: #aebbd0;
   color: #ffffff;
 }
-

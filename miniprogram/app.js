@@ -1,26 +1,22 @@
-const api = require('./utils/api')
-
 App({
-  async onLaunch() {
+  onLaunch() {
     if (!wx.cloud) {
       wx.showModal({
         title: '版本过低',
         content: '请升级微信后重试',
         showCancel: false
       })
+      this.finishLaunch()
       return
     }
 
     wx.cloud.init({ traceUser: true })
+    this.finishLaunch()
+  },
 
-    try {
-      this.globalData.session = await api.bootstrap()
-    } catch (error) {
-      console.error('初始化失败', error)
-    } finally {
-      this.globalData.ready = true
-      this._readyResolvers.splice(0).forEach(resolve => resolve())
-    }
+  finishLaunch() {
+    this.globalData.ready = true
+    this._readyResolvers.splice(0).forEach(resolve => resolve())
   },
 
   whenReady() {
@@ -31,8 +27,6 @@ App({
   _readyResolvers: [],
 
   globalData: {
-    ready: false,
-    session: null
+    ready: false
   }
 })
-

@@ -92,7 +92,7 @@ Page({
   },
 
   onShow() {
-    this.load()
+    if (!this.data.items.length || Date.now() - Number(this.lastLoadedAt || 0) > 15 * 1000) this.load()
   },
 
   async onPullDownRefresh() {
@@ -103,13 +103,14 @@ Page({
   async load() {
     this.setData({ loading: true })
     try {
-      const [session, data] = await Promise.all([api.bootstrap(), api.getMine({ offset: 0, limit: 100 })])
+      const data = await api.getMine({ offset: 0, limit: 30 })
       this.setData({
         items: data.items || [],
         totalItems: Number(data.total) || 0,
         hasMore: data.hasMore === true,
-        batchUploadEnabled: session.batchUploadEnabled === true
+        batchUploadEnabled: data.batchUploadEnabled === true
       })
+      this.lastLoadedAt = Date.now()
       this.filterItems()
     } catch (error) {
       wx.showToast({ title: messageOf(error, '加载失败'), icon: 'none' })
@@ -137,7 +138,7 @@ Page({
     if (!this.data.hasMore || this.data.loadingMore) return
     this.setData({ loadingMore: true })
     try {
-      const data = await api.getMine({ offset: this.data.items.length, limit: 100 })
+      const data = await api.getMine({ offset: this.data.items.length, limit: 30 })
       const existingIds = new Set(this.data.items.map(item => item._id))
       const additions = (data.items || []).filter(item => !existingIds.has(item._id))
       this.setData({

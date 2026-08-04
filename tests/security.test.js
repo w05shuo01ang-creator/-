@@ -27,8 +27,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, canReplaceHashClaim }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, canReplaceHashClaim } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -97,6 +97,10 @@ assert.strictEqual(isAdmin('admin-openid'), true)
 assert.strictEqual(isAdmin('unknown-openid'), false)
 assert.deepStrictEqual(Array.from(cleanTags([], false)), ['表情包'])
 assert.deepStrictEqual(Array.from(cleanTags([], true)), [])
+assert.strictEqual(canReplaceHashClaim(null, 1000), true)
+assert.strictEqual(canReplaceHashClaim({ status: 'active' }, 1000), false)
+assert.strictEqual(canReplaceHashClaim({ status: 'reserved', expiresAt: new Date(999) }, 1000), true)
+assert.strictEqual(canReplaceHashClaim({ status: 'reserved', expiresAt: new Date(1001) }, 1000), false)
 
 const rankingPool = Array.from({ length: 12 }, (_, index) => ({
   tags: [`标签${index + 1}`],

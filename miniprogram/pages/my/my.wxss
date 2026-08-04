@@ -1,6 +1,6 @@
 .account-head {
   padding: 38rpx 30rpx 22rpx;
-  background: #ffffff;
+  background: #f8faf9;
 }
 
 .head-title,
@@ -21,19 +21,14 @@
 
 .head-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12rpx;
   padding: 0 30rpx 28rpx;
   border-bottom: 1rpx solid #e6e9ee;
-  background: #ffffff;
-}
-
-.head-actions.two-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: #f8faf9;
 }
 
 .upload-button,
-.batch-button,
 .ai-button {
   display: flex;
   align-items: center;
@@ -53,16 +48,32 @@
   color: #ffffff;
 }
 
-.batch-button {
-  border: 1rpx solid #c9d8ff;
-  background: #edf3ff;
-  color: #165dff;
-}
-
 .ai-button {
   border: 1rpx solid #18202a;
   background: #18202a;
   color: #ffffff;
+}
+
+.batch-rail {
+  position: fixed;
+  z-index: 12;
+  top: 54%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 66rpx;
+  height: 118rpx;
+  border: 1rpx solid #b9c8be;
+  border-right: 0;
+  border-radius: 8rpx 0 0 8rpx;
+  background: #ffffff;
+  color: #28664d;
+  font-size: 21rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  box-shadow: 0 6rpx 18rpx rgba(24, 32, 42, 0.1);
 }
 
 .tabs {

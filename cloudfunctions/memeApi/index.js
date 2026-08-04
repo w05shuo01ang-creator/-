@@ -13,6 +13,7 @@ const RATE_LIMITS = 'rate_limits'
 const MODERATION_AUDITS = 'moderation_audits'
 const REPORTS = 'reports'
 const BLOCKED_USERS = 'blocked_users'
+const MEME_HASHES = 'meme_hashes'
 const MAX_PAGE_SIZE = 30
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_IMAGE_EDGE = 4096
@@ -24,6 +25,8 @@ const DAILY_UPLOAD_BYTES = 25 * 1024 * 1024
 const ADMIN_DAILY_UPLOAD_COUNT = 100
 const ADMIN_DAILY_UPLOAD_BYTES = 250 * 1024 * 1024
 const ADMIN_DAILY_PUBLISH_COUNT = 100
+const HOME_CACHE_TTL = 30 * 1000
+let homeCache = null
 
 class ApiError extends Error {
   constructor(code, message) {
@@ -307,6 +310,66 @@ async function consumeUploadQuota(openid, fileSize) {
   })
 }
 
+async function claimContentHash(contentHash, openid) {
+  const claimToken = digest(`claim:${openid}:${contentHash}:${Date.now()}:${Math.random()}`)
+  await db.runTransaction(async transaction => {
+    const reference = transaction.collection(MEME_HASHES).doc(contentHash)
+    let existing = null
+    try {
+      const result = await reference.get()
+      existing = result.data || null
+    } catch (error) {
+      existing = null
+    }
+    if (!canReplaceHashClaim(existing)) throw new ApiError('DUPLICATE_IMAGE', '该图片已存在，请勿重复上传')
+    await reference.set({
+      data: {
+        contentHash,
+        ownerKey: ownerKey(openid),
+        claimToken,
+        status: 'reserved',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate()
+      }
+    })
+  })
+  return claimToken
+}
+
+function canReplaceHashClaim(existing, now = Date.now()) {
+  if (!existing) return true
+  return existing.status === 'reserved' && new Date(existing.expiresAt).getTime() <= now
+}
+
+async function releaseContentHash(contentHash, claimToken) {
+  try {
+    const reference = db.collection(MEME_HASHES).doc(contentHash)
+    const result = await reference.get()
+    if (result.data && result.data.claimToken === claimToken && result.data.status === 'reserved') {
+      await reference.remove()
+    }
+  } catch (error) {
+    console.error('failed to release content hash', { contentHash, error })
+  }
+}
+
+async function activateContentHash(contentHash, claimToken, memeId) {
+  const reference = db.collection(MEME_HASHES).doc(contentHash)
+  const result = await reference.get()
+  if (!result.data || result.data.claimToken !== claimToken) {
+    throw new Error('content hash claim was lost')
+  }
+  await reference.update({
+    data: {
+      memeId,
+      status: 'active',
+      expiresAt: command.remove(),
+      updatedAt: db.serverDate()
+    }
+  })
+}
+
 function pageParams(payload) {
   const offset = Math.max(0, Math.min(1000, Number(payload.offset) || 0))
   const limit = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(payload.limit) || 20))
@@ -442,17 +505,24 @@ function buildTagRankings(pool) {
 }
 
 async function home(openid) {
-  const pool = await publicPool()
-  const featuredSource = pool
-    .slice()
-    .sort((left, right) => (right.totalLikes || 0) - (left.totalLikes || 0) || new Date(right.createdAt) - new Date(left.createdAt))
-    .slice(0, 12)
-  const rankings = buildTagRankings(pool)
+  if (!homeCache || homeCache.expiresAt <= Date.now()) {
+    const pool = await publicPool()
+    const featuredSource = pool
+      .slice()
+      .sort((left, right) => (right.totalLikes || 0) - (left.totalLikes || 0) || new Date(right.createdAt) - new Date(left.createdAt))
+      .slice(0, 12)
+    homeCache = {
+      expiresAt: Date.now() + HOME_CACHE_TTL,
+      featured: await present(featuredSource),
+      featuredIds: featuredSource.map(item => item._id),
+      rankings: buildTagRankings(pool)
+    }
+  }
 
   return {
-    featured: await present(featuredSource),
-    rankings,
-    likedIds: await likedMemeIds(openid, featuredSource.map(item => item._id))
+    featured: homeCache.featured,
+    rankings: homeCache.rankings,
+    likedIds: await likedMemeIds(openid, homeCache.featuredIds)
   }
 }
 
@@ -486,7 +556,8 @@ async function mine(openid, payload = {}) {
   return {
     items,
     total: countResult.total,
-    hasMore: offset + items.length < countResult.total
+    hasMore: offset + items.length < countResult.total,
+    batchUploadEnabled: isAdmin(openid)
   }
 }
 
@@ -559,20 +630,28 @@ async function create(payload, openid) {
     safeFileID = replaced.fileID || fileID
   }
   const duplicate = await db.collection(MEMES)
-    .where({ _openid: openid, contentHash: inspected.contentHash })
+    .where({ contentHash: inspected.contentHash })
     .limit(1)
     .get()
   if (duplicate.data && duplicate.data.length) {
-    throw new ApiError('DUPLICATE_IMAGE', '这张图片已经上传过了')
+    throw new ApiError('DUPLICATE_IMAGE', '该图片已存在，请勿重复上传')
   }
-  await consumeUploadQuota(openid, inspected.fileSize)
+  const claimToken = await claimContentHash(inspected.contentHash, openid)
+  try {
+    await consumeUploadQuota(openid, inspected.fileSize)
+  } catch (error) {
+    await releaseContentHash(inspected.contentHash, claimToken)
+    throw error
+  }
 
   const allowEmptyTags = isAdmin(openid) && payload.allowEmptyTags === true
   const tags = cleanTags(payload.tags, allowEmptyTags)
   const prompt = cleanText(payload.prompt, 60) || tags.join(' ')
   const now = db.serverDate()
-  const result = await db.collection(MEMES).add({
-    data: {
+  let result
+  try {
+    result = await db.collection(MEMES).add({
+      data: {
       _openid: openid,
       fileID: safeFileID,
       contentHash: inspected.contentHash,
@@ -588,8 +667,17 @@ async function create(payload, openid) {
       reviewStatus: 'private',
       createdAt: now,
       updatedAt: now
-    }
-  })
+      }
+    })
+  } catch (error) {
+    await releaseContentHash(inspected.contentHash, claimToken)
+    throw error
+  }
+  try {
+    await activateContentHash(inspected.contentHash, claimToken, result._id)
+  } catch (error) {
+    console.error('failed to activate content hash', { contentHash: inspected.contentHash, memeId: result._id, error })
+  }
   return { id: result._id }
 }
 
@@ -726,6 +814,16 @@ async function remove(id, openid) {
     db.collection(LIKES).where({ memeId: id }).remove(),
     db.collection(TAG_LIKES).where({ memeId: id }).remove()
   ])
+  if (item.contentHash) {
+    try {
+      const hashResult = await db.collection(MEME_HASHES).doc(item.contentHash).get()
+      if (hashResult.data && hashResult.data.memeId === id) {
+        await db.collection(MEME_HASHES).doc(item.contentHash).remove()
+      }
+    } catch (error) {
+      console.error('failed to release active content hash', { id, contentHash: item.contentHash, error })
+    }
+  }
 
   if (item.fileID && item.fileID.startsWith('cloud://')) {
     try {

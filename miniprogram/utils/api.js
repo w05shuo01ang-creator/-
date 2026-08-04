@@ -44,8 +44,7 @@ function prepareImage(filePath) {
 }
 
 async function uploadMeme({ filePath, prompt, tags, allowEmptyTags = false }) {
-  const session = await bootstrap()
-  const preparedPath = await prepareImage(filePath)
+  const [session, preparedPath] = await Promise.all([bootstrap(), prepareImage(filePath)])
   const cloudPath = [
     'uploads',
     session.ownerKey,
