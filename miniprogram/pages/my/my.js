@@ -2,6 +2,24 @@ const api = require('../../utils/api')
 const { matchBatchFiles, parseBatchManifest } = require('../../utils/batch')
 const { messageOf } = require('../../utils/view')
 
+function readTextFile(filePath) {
+  if (!filePath) return Promise.reject(new Error('微信没有返回批量清单的临时路径'))
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().readFile({
+      filePath,
+      encoding: 'utf8',
+      success: result => resolve(result.data),
+      fail: reject
+    })
+  })
+}
+
+function batchErrorMessage(error) {
+  if (error && error.message) return error.message
+  const wxMessage = String(error && error.errMsg || '').replace(/^[^:]+:fail\s*/i, '').trim()
+  return wxMessage || '读取批量文件失败'
+}
+
 Page({
   data: {
     loading: true,
@@ -149,7 +167,7 @@ Page({
       if (!manifestFile) return
       if (Number(manifestFile.size) > 2 * 1024 * 1024) throw new Error('批量清单不能超过 2 MB')
       const manifestPath = manifestFile.path || manifestFile.tempFilePath
-      const manifestText = wx.getFileSystemManager().readFileSync(manifestPath, 'utf8')
+      const manifestText = await readTextFile(manifestPath)
       const manifestItems = parseBatchManifest(manifestText)
 
       const fileResult = await wx.chooseMessageFile({
@@ -167,7 +185,7 @@ Page({
       await this.runBatchUpload(matched)
     } catch (error) {
       if (!String(error.errMsg || '').includes('cancel')) {
-        wx.showModal({ title: '无法批量导入', content: messageOf(error, '读取批量文件失败'), showCancel: false })
+        wx.showModal({ title: '无法批量导入', content: batchErrorMessage(error), showCancel: false })
       }
     }
   },
