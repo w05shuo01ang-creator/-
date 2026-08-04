@@ -20,6 +20,52 @@ function batchErrorMessage(error) {
   return wxMessage || '读取批量文件失败'
 }
 
+function fsCall(method, options) {
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager()[method]({ ...options, success: resolve, fail: reject })
+  })
+}
+
+function listFiles(rootPath) {
+  const manager = wx.getFileSystemManager()
+  const files = []
+  function walk(directory) {
+    manager.readdirSync(directory).forEach(name => {
+      const filePath = `${directory}/${name}`
+      const stats = manager.statSync(filePath)
+      if (stats.isDirectory()) walk(filePath)
+      else files.push({ name, path: filePath, size: Number(stats.size) || 0 })
+    })
+  }
+  walk(rootPath)
+  return files
+}
+
+async function readBatchArchive(archiveFile) {
+  if (Number(archiveFile.size) > 100 * 1024 * 1024) throw new Error('批量压缩包不能超过 100 MB')
+  const zipFilePath = archiveFile.path || archiveFile.tempFilePath
+  if (!zipFilePath) throw new Error('微信没有返回压缩包的临时路径')
+  const targetPath = `${wx.env.USER_DATA_PATH}/batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  await fsCall('mkdir', { dirPath: targetPath, recursive: true })
+  try {
+    await fsCall('unzip', { zipFilePath, targetPath })
+    const files = listFiles(targetPath)
+    const manifests = files.filter(file => file.name.toLowerCase() === 'memecraft-labels.json')
+    if (manifests.length !== 1) throw new Error('ZIP 中必须包含一个 memecraft-labels.json')
+    const manifestItems = parseBatchManifest(await readTextFile(manifests[0].path))
+    const expectedNames = new Set(manifestItems.map(item => item.uploadFile.toLowerCase()))
+    const images = files.filter(file => expectedNames.has(file.name.toLowerCase()))
+    const matched = matchBatchFiles(images, manifestItems)
+    if (matched.length !== manifestItems.length) {
+      throw new Error(`ZIP 图片不完整：需要 ${manifestItems.length} 张，实际找到 ${matched.length} 张`)
+    }
+    return { matched, targetPath }
+  } catch (error) {
+    fsCall('rmdir', { dirPath: targetPath, recursive: true }).catch(() => {})
+    throw error
+  }
+}
+
 Page({
   data: {
     loading: true,
@@ -157,25 +203,32 @@ Page({
 
   async startBatchUpload() {
     if (this.data.batchUploading || this.data.uploading) return
+    let unpackedDirectory = ''
     try {
       const manifestResult = await wx.chooseMessageFile({
         count: 1,
         type: 'file',
-        extension: ['json']
+        extension: ['json', 'zip']
       })
       const manifestFile = manifestResult.tempFiles && manifestResult.tempFiles[0]
       if (!manifestFile) return
-      if (Number(manifestFile.size) > 2 * 1024 * 1024) throw new Error('批量清单不能超过 2 MB')
-      const manifestPath = manifestFile.path || manifestFile.tempFilePath
-      const manifestText = await readTextFile(manifestPath)
-      const manifestItems = parseBatchManifest(manifestText)
-
-      const fileResult = await wx.chooseMessageFile({
-        count: Math.min(100, manifestItems.length),
-        type: 'file',
-        extension: ['jpg', 'jpeg', 'png']
-      })
-      const matched = matchBatchFiles(fileResult.tempFiles, manifestItems)
+      const selectedName = String(manifestFile.name || manifestFile.path || manifestFile.tempFilePath || '')
+      let matched
+      if (/\.zip$/i.test(selectedName)) {
+        const archive = await readBatchArchive(manifestFile)
+        matched = archive.matched
+        unpackedDirectory = archive.targetPath
+      } else {
+        if (Number(manifestFile.size) > 2 * 1024 * 1024) throw new Error('批量清单不能超过 2 MB')
+        const manifestPath = manifestFile.path || manifestFile.tempFilePath
+        const manifestItems = parseBatchManifest(await readTextFile(manifestPath))
+        const fileResult = await wx.chooseMessageFile({
+          count: Math.min(100, manifestItems.length),
+          type: 'file',
+          extension: ['jpg', 'jpeg', 'png']
+        })
+        matched = matchBatchFiles(fileResult.tempFiles, manifestItems)
+      }
       const confirmation = await wx.showModal({
         title: `导入 ${matched.length} 张表情`,
         content: '将逐张上传并自动提交内容审核。处理期间请保持本页和网络连接。',
@@ -186,6 +239,10 @@ Page({
     } catch (error) {
       if (!String(error.errMsg || '').includes('cancel')) {
         wx.showModal({ title: '无法批量导入', content: batchErrorMessage(error), showCancel: false })
+      }
+    } finally {
+      if (unpackedDirectory) {
+        fsCall('rmdir', { dirPath: unpackedDirectory, recursive: true }).catch(() => {})
       }
     }
   },
