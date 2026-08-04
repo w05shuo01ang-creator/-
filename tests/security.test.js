@@ -14,6 +14,7 @@ const sandbox = {
   module: { exports: {} },
   require(name) {
     if (name === 'crypto') return crypto
+    if (name === './ai-config') return require('../cloudfunctions/memeApi/ai-config')
     if (name === 'wx-server-sdk') {
       return {
         DYNAMIC_CURRENT_ENV: 'test',

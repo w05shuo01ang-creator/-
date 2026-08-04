@@ -1,0 +1,51 @@
+<view class="page ai-page">
+  <view class="ai-head">
+    <view>
+      <text class="ai-title">AI制作</text>
+      <text class="ai-subtitle">把一句想法变成新的表情</text>
+    </view>
+    <view class="quota-block">
+      <text class="quota-value">{{quota.remaining}}</text>
+      <text class="quota-label">今日可用</text>
+    </view>
+  </view>
+
+  <view class="quota-bar">
+    <text>每日 {{quota.dailyLimit}} 次<text wx:if="{{quota.bonus}}"> · 加赠 {{quota.bonus}} 次</text></text>
+    <button class="credit-button" bindtap="addCredits">＋ 增加次数</button>
+  </view>
+
+  <view class="canvas" wx:if="{{!loading}}">
+    <view class="canvas-empty">
+      <text class="canvas-mark">AI</text>
+      <text class="canvas-title">{{available ? '等待生成' : '功能准备中'}}</text>
+      <text class="canvas-copy">{{available ? '生成结果将在这里显示' : '该功能暂未上线，请期待'}}</text>
+    </view>
+  </view>
+
+  <view class="control-band">
+    <view class="control-head">
+      <text class="control-title">模型</text>
+      <text class="model-state">{{available ? selectedModel.name : '暂无可用模型'}}</text>
+    </view>
+    <picker disabled="{{!available}}" range="{{modelNames}}" value="{{selectedModelIndex}}" bindchange="selectModel">
+      <view class="model-picker {{!available ? 'disabled' : ''}}">
+        <view>
+          <text class="model-name">{{available ? selectedModel.name : '模型接入后可在此选择'}}</text>
+          <text class="model-description">{{available ? selectedModel.description : '配置由云端统一管理'}}</text>
+        </view>
+        <text class="picker-arrow">›</text>
+      </view>
+    </picker>
+
+    <text class="control-title prompt-title">画面描述</text>
+    <textarea class="prompt-input" value="{{prompt}}" maxlength="500" placeholder="描述人物、动作、情绪和文字风格" bindinput="onPrompt" disabled="{{!available}}" />
+
+    <text class="control-title ratio-title">画幅</text>
+    <view class="ratio-control">
+      <view class="ratio-item {{selectedRatio === item ? 'active' : ''}}" wx:for="{{aspectRatios}}" wx:key="*this" data-ratio="{{item}}" bindtap="selectRatio">{{item}}</view>
+    </view>
+
+    <button class="generate-button" bindtap="generate" loading="{{generating}}" disabled="{{generating || !available || !prompt || quota.remaining < 1}}">生成表情</button>
+  </view>
+</view>

@@ -1,5 +1,6 @@
 const api = require('../../utils/api')
 const { matchBatchFiles, parseBatchManifest } = require('../../utils/batch')
+const { buildMineView } = require('../../utils/mine')
 const { messageOf } = require('../../utils/view')
 
 function readTextFile(filePath) {
@@ -70,8 +71,15 @@ Page({
   data: {
     loading: true,
     items: [],
+    totalItems: 0,
+    hasMore: false,
+    loadingMore: false,
     currentTab: 'private',
     filtered: [],
+    tabCounts: { private: 0, review: 0, public: 0 },
+    searchQuery: '',
+    activeTag: '',
+    tagFilters: [],
     showUpload: false,
     uploading: false,
     batchUploadEnabled: false,
@@ -95,9 +103,11 @@ Page({
   async load() {
     this.setData({ loading: true })
     try {
-      const [session, data] = await Promise.all([api.bootstrap(), api.getMine()])
+      const [session, data] = await Promise.all([api.bootstrap(), api.getMine({ offset: 0, limit: 100 })])
       this.setData({
         items: data.items || [],
+        totalItems: Number(data.total) || 0,
+        hasMore: data.hasMore === true,
         batchUploadEnabled: session.batchUploadEnabled === true
       })
       this.filterItems()
@@ -109,19 +119,57 @@ Page({
   },
 
   changeTab(event) {
-    this.setData({ currentTab: event.currentTarget.dataset.tab })
+    this.setData({ currentTab: event.currentTarget.dataset.tab, activeTag: '' })
     this.filterItems()
   },
 
   filterItems() {
-    const tab = this.data.currentTab
+    const view = buildMineView(this.data.items, this.data.currentTab, this.data.searchQuery, this.data.activeTag)
     this.setData({
-      filtered: this.data.items.filter(item => {
-        if (tab === 'public') return item.reviewStatus === 'approved'
-        if (tab === 'review') return ['pending', 'auto_reviewing', 'manual_review', 'rejected'].includes(item.reviewStatus)
-        return item.reviewStatus === 'private'
-      })
+      filtered: view.filtered,
+      tabCounts: view.counts,
+      tagFilters: view.tagFilters,
+      activeTag: view.activeTag
     })
+  },
+
+  async loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore) return
+    this.setData({ loadingMore: true })
+    try {
+      const data = await api.getMine({ offset: this.data.items.length, limit: 100 })
+      const existingIds = new Set(this.data.items.map(item => item._id))
+      const additions = (data.items || []).filter(item => !existingIds.has(item._id))
+      this.setData({
+        items: this.data.items.concat(additions),
+        totalItems: Number(data.total) || this.data.totalItems,
+        hasMore: data.hasMore === true
+      })
+      this.filterItems()
+    } catch (error) {
+      wx.showToast({ title: messageOf(error, '加载更多失败'), icon: 'none' })
+    } finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+
+  onSearchInput(event) {
+    this.setData({ searchQuery: event.detail.value })
+    this.filterItems()
+  },
+
+  clearSearch() {
+    this.setData({ searchQuery: '' })
+    this.filterItems()
+  },
+
+  selectFilterTag(event) {
+    this.setData({ activeTag: event.currentTarget.dataset.key || '' })
+    this.filterItems()
+  },
+
+  openAiCreate() {
+    wx.navigateTo({ url: '/pages/ai-create/ai-create' })
   },
 
   showUpload() {

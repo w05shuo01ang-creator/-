@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/category/category",
     "pages/my/my",
+    "pages/ai-create/ai-create",
     "pages/detail/detail"
   ],
   "window": {
@@ -27,4 +28,3 @@
   "lazyCodeLoading": "requiredComponents",
   "sitemapLocation": "sitemap.json"
 }
-

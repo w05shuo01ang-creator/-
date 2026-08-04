@@ -2,18 +2,20 @@
   <view class="account-head">
     <view>
       <text class="head-title">我的表情</text>
-      <text class="head-sub">上传、审核和管理都在这里</text>
-    </view>
-    <view class="head-actions">
-      <button class="batch-button" wx:if="{{batchUploadEnabled}}" bindtap="startBatchUpload" disabled="{{batchUploading}}">批量</button>
-      <button class="upload-button" bindtap="showUpload" disabled="{{batchUploading}}">＋ 上传</button>
+      <text class="head-sub">已加载 {{items.length}} / {{totalItems}} 张 · 按状态和标签管理</text>
     </view>
   </view>
 
+  <view class="head-actions {{batchUploadEnabled ? '' : 'two-actions'}}">
+    <button class="ai-button" bindtap="openAiCreate" disabled="{{batchUploading}}">AI制作</button>
+    <button class="batch-button" wx:if="{{batchUploadEnabled}}" bindtap="startBatchUpload" disabled="{{batchUploading}}">批量导入</button>
+    <button class="upload-button" bindtap="showUpload" disabled="{{batchUploading}}">＋ 上传</button>
+  </view>
+
   <view class="tabs">
-    <view class="tab {{currentTab === 'private' ? 'active' : ''}}" data-tab="private" bindtap="changeTab">私密</view>
-    <view class="tab {{currentTab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="changeTab">审核</view>
-    <view class="tab {{currentTab === 'public' ? 'active' : ''}}" data-tab="public" bindtap="changeTab">已公开</view>
+    <view class="tab {{currentTab === 'private' ? 'active' : ''}}" data-tab="private" bindtap="changeTab"><text>私密</text><text class="tab-count">{{tabCounts.private}}</text></view>
+    <view class="tab {{currentTab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="changeTab"><text>审核</text><text class="tab-count">{{tabCounts.review}}</text></view>
+    <view class="tab {{currentTab === 'public' ? 'active' : ''}}" data-tab="public" bindtap="changeTab"><text>已公开</text><text class="tab-count">{{tabCounts.public}}</text></view>
   </view>
 
   <view class="batch-progress" wx:if="{{batchUploading}}">
@@ -21,13 +23,31 @@
     <text class="batch-stop" bindtap="stopBatchUpload">停止</text>
   </view>
 
+  <view class="library-tools">
+    <view class="mine-search">
+      <text class="search-symbol">⌕</text>
+      <input class="mine-search-input" value="{{searchQuery}}" placeholder="搜索描述或标签" bindinput="onSearchInput" />
+      <text class="search-clear" wx:if="{{searchQuery}}" bindtap="clearSearch">×</text>
+    </view>
+    <scroll-view class="tag-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="tag-filter-row">
+        <view class="filter-tag {{activeTag === item.key ? 'active' : ''}}" wx:for="{{tagFilters}}" wx:key="key" data-key="{{item.key}}" bindtap="selectFilterTag">
+          <text>{{item.label}}</text><text class="filter-count">{{item.count}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
   <view class="mine-list" wx:if="{{filtered.length}}">
     <view class="mine-item" wx:for="{{filtered}}" wx:key="_id">
       <image class="thumb" src="{{item.displayUrl}}" mode="aspectFill" bindtap="preview" data-url="{{item.displayUrl}}" />
       <view class="item-main" bindtap="openDetail" data-id="{{item._id}}">
         <text class="item-prompt">{{item.prompt || '未命名表情'}}</text>
-        <text class="item-tags">{{item.tagsText}}</text>
-        <text class="item-status status-{{item.reviewStatus}}">{{item.reviewStatusText}}</text>
+        <text class="item-tags">{{item.tagsText || '无标签'}}</text>
+        <view class="item-meta">
+          <text class="item-status status-{{item.reviewStatus}}">{{item.reviewStatusText}}</text>
+          <text class="item-date">{{item.createdAtText}}</text>
+        </view>
       </view>
       <view class="actions">
         <text class="action" catchtap="save" data-item="{{item}}">保存</text>
@@ -37,9 +57,11 @@
     </view>
   </view>
 
+  <button class="load-more" wx:if="{{hasMore}}" bindtap="loadMore" loading="{{loadingMore}}" disabled="{{loadingMore}}">加载更多表情</button>
+
   <view class="empty" wx:if="{{!loading && !filtered.length}}">
-    <text class="empty-title">这里还没有表情</text>
-    <text>{{currentTab === 'private' ? '上传后会默认保存在私密区' : currentTab === 'review' ? '待审核和被拒绝的内容会显示在这里' : '审核通过的内容会显示在这里'}}</text>
+    <text class="empty-title">{{searchQuery || activeTag ? '没有匹配的表情' : '这里还没有表情'}}</text>
+    <text>{{searchQuery || activeTag ? '换一个关键词或标签试试' : currentTab === 'private' ? '上传后会默认保存在私密区' : currentTab === 'review' ? '待审核和被拒绝的内容会显示在这里' : '审核通过的内容会显示在这里'}}</text>
   </view>
   <view class="loading" wx:if="{{loading}}">正在整理...</view>
 
