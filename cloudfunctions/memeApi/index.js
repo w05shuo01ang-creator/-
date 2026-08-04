@@ -535,22 +535,82 @@ function stableRandomOrder(items, seed = chinaDayKey()) {
     .sort((left, right) => digest(`list:${seed}:${left._id}`).localeCompare(digest(`list:${seed}:${right._id}`)))
 }
 
+function personalizeFeatured(featured, pool, likedIds, openid, timestamp = Date.now(), limit = 12) {
+  const maximum = Math.max(1, Math.min(30, Number(limit) || 12))
+  const liked = new Set(Array.isArray(likedIds) ? likedIds : [])
+  const selected = []
+  const selectedIds = new Set()
+  const add = item => {
+    if (!item || !item._id || selectedIds.has(item._id) || selected.length >= maximum) return
+    selected.push(item)
+    selectedIds.add(item._id)
+  }
+  const personalSeed = `${chinaDayKey(timestamp)}:${digest(openid, 12)}`
+  stableRandomOrder((pool || []).filter(item => liked.has(item._id)), `liked:${personalSeed}`)
+    .slice(0, 2)
+    .forEach(add)
+  const ownCount = () => selected.filter(item => item._openid === openid).length
+  for (const item of stableRandomOrder((pool || []).filter(candidate => candidate._openid === openid), `own:${personalSeed}`)) {
+    if (ownCount() >= 2) break
+    add(item)
+  }
+  ;(featured || []).forEach(add)
+  ;(pool || []).forEach(add)
+  return selected
+}
+
+async function personalFeaturedCandidates(openid) {
+  const [likeResult, ownedResult] = await Promise.all([
+    db.collection(LIKES).where({ _openid: openid }).limit(100).get(),
+    db.collection(MEMES).where({ _openid: openid }).limit(100).get()
+  ])
+  const likedIds = [...new Set((likeResult.data || []).map(item => item.memeId).filter(Boolean))]
+  let likedMemes = []
+  if (likedIds.length) {
+    const result = await db.collection(MEMES)
+      .where({ _id: command.in(likedIds.slice(0, 20)) })
+      .limit(20)
+      .get()
+    likedMemes = result.data || []
+  }
+  const candidates = Array.from(new Map((ownedResult.data || [])
+    .concat(likedMemes)
+    .filter(item => item && item._id && item.isPublic === true && item.reviewStatus === 'approved')
+    .map(item => [item._id, item])).values())
+  return { candidates, likedIds }
+}
+
 async function home(openid) {
   if (!homeCache || homeCache.expiresAt <= Date.now()) {
     const pool = await publicPool()
     const featuredSource = selectFeatured(pool)
     homeCache = {
       expiresAt: Date.now() + HOME_CACHE_TTL,
+      pool,
+      featuredSource,
       featured: await present(featuredSource),
-      featuredIds: featuredSource.map(item => item._id),
       rankings: buildTagRankings(pool)
     }
   }
 
+  const personal = await personalFeaturedCandidates(openid)
+  const candidatePool = Array.from(new Map(homeCache.pool
+    .concat(personal.candidates)
+    .map(item => [item._id, item])).values())
+  const featuredSource = personalizeFeatured(homeCache.featuredSource, candidatePool, personal.likedIds, openid)
+  const presentedById = new Map(homeCache.featured.map(item => [item._id, item]))
+  const extras = featuredSource.filter(item => !presentedById.has(item._id))
+  if (extras.length) {
+    const presentedExtras = await present(extras)
+    presentedExtras.forEach(item => presentedById.set(item._id, item))
+  }
+  const featured = featuredSource.map(item => presentedById.get(item._id)).filter(Boolean)
+  const featuredIds = new Set(featuredSource.map(item => item._id))
+
   return {
-    featured: homeCache.featured,
+    featured,
     rankings: homeCache.rankings,
-    likedIds: await likedMemeIds(openid, homeCache.featuredIds)
+    likedIds: personal.likedIds.filter(id => featuredIds.has(id))
   }
 }
 

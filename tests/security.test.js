@@ -27,8 +27,8 @@ const sandbox = {
   }
 }
 
-vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder }`, sandbox)
-const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder } = sandbox.exports.__test
+vm.runInNewContext(`${source}\nexports.__test = { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder, personalizeFeatured }`, sandbox)
+const { inspectImage, sanitizeImage, moderationResult, buildTagRankings, isAdmin, cleanTags, globalUploadLimits, chinaDayKey, updateDailyLikeDeltas, selectFeatured, stableRandomOrder, personalizeFeatured } = sandbox.exports.__test
 
 function pngChunk(type, data) {
   const typeBuffer = Buffer.from(type, 'ascii')
@@ -122,6 +122,7 @@ assert.deepStrictEqual(JSON.parse(JSON.stringify(updateDailyLikeDeltas({ '2026-0
 })
 const featuredPool = Array.from({ length: 15 }, (_, index) => ({
   _id: `meme-${index + 1}`,
+  _openid: index >= 11 ? 'test-openid' : `owner-${index + 1}`,
   totalLikes: index,
   dailyLikeDeltas: index < 6 ? { '2026-08-03': index + 1 } : {},
   createdAt: new Date(featuredNow - index * 1000)
@@ -135,6 +136,11 @@ const randomOrder = Array.from(stableRandomOrder(featuredPool, '2026-08-04'), it
 assert.deepStrictEqual(Array.from(stableRandomOrder(featuredPool, '2026-08-04'), item => item._id), randomOrder)
 assert.notDeepStrictEqual(Array.from(stableRandomOrder(featuredPool, '2026-08-05'), item => item._id), randomOrder)
 assert.strictEqual(new Set(randomOrder).size, featuredPool.length)
+const personalized = personalizeFeatured(featured, featuredPool, ['meme-10', 'meme-11'], 'test-openid', featuredNow)
+assert.strictEqual(personalized.length, 12)
+assert.strictEqual(new Set(personalized.map(item => item._id)).size, 12)
+assert.ok(['meme-10', 'meme-11'].every(id => personalized.some(item => item._id === id)))
+assert.ok(personalized.filter(item => item._openid === 'test-openid').length >= 2)
 
 const uploadMedia = { contentType: validJpeg.mimeType, value: validJpeg.buffer }
 assert.strictEqual(uploadMedia.contentType, 'image/jpeg')
