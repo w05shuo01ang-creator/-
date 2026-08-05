@@ -1,6 +1,5 @@
 const crypto = require('crypto')
 const cloud = require('wx-server-sdk')
-const { dailyLimit: aiDailyLimit, loadModels: loadAiModels } = require('./ai-config')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -427,43 +426,6 @@ function matches(item, tag, query) {
 
 async function bootstrap(openid) {
   return { ownerKey: ownerKey(openid), batchUploadEnabled: isAdmin(openid) }
-}
-
-async function aiConfig(openid) {
-  const models = loadAiModels()
-  const dailyLimit = aiDailyLimit()
-  const day = new Date().toISOString().slice(0, 10)
-  const usageId = digest(`ai-generation:${openid}:${day}`)
-  let used = 0
-  try {
-    const result = await db.collection(RATE_LIMITS).doc(usageId).get()
-    used = Math.max(0, Number(result.data.count) || 0)
-  } catch (error) {
-    used = 0
-  }
-  return {
-    available: models.length > 0,
-    models,
-    quota: {
-      dailyLimit,
-      bonus: 0,
-      used,
-      remaining: Math.max(0, dailyLimit - used),
-      topUpEnabled: false
-    }
-  }
-}
-
-async function generateAiMeme(payload, openid) {
-  const models = loadAiModels()
-  if (!models.length) throw new ApiError('FEATURE_UNAVAILABLE', '该功能暂未上线，请期待')
-  const modelId = cleanText(payload.modelId, 40)
-  if (!models.some(model => model.id === modelId)) throw new ApiError('INVALID_ARGUMENT', '请选择可用的生图模型')
-  throw new ApiError('MODEL_NOT_CONNECTED', '模型服务尚未接入')
-}
-
-async function requestAiCredits() {
-  throw new ApiError('FEATURE_UNAVAILABLE', '增加次数功能暂未上线')
 }
 
 function buildTagRankings(pool) {
@@ -1031,9 +993,6 @@ const actions = {
   home: ({ openid }) => home(openid),
   list: ({ openid, payload }) => list(openid, payload),
   mine: ({ openid, payload }) => mine(openid, payload),
-  aiConfig: ({ openid }) => aiConfig(openid),
-  generateAiMeme: ({ openid, payload }) => generateAiMeme(payload, openid),
-  requestAiCredits: ({ openid }) => requestAiCredits(openid),
   detail: ({ openid, payload }) => detail(cleanId(payload.id), openid),
   create: ({ openid, payload }) => create(payload, openid),
   requestPublish: ({ openid, payload }) => requestPublish(cleanId(payload.id), openid),
@@ -1051,7 +1010,7 @@ exports.main = async event => {
     }
     const { openid } = context()
     const payload = event && event.payload && typeof event.payload === 'object' ? event.payload : {}
-    if (['create', 'generateAiMeme', 'requestAiCredits', 'requestPublish', 'toggleLike', 'toggleTagLike', 'report'].includes(action)) {
+    if (['create', 'requestPublish', 'toggleLike', 'toggleTagLike', 'report'].includes(action)) {
       await assertNotBlocked(openid)
     }
     const data = await actions[action]({ openid, payload })

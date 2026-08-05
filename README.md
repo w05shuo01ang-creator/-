@@ -55,8 +55,6 @@ node tests/security.test.js
 
 首批素材可使用 [批量图片智能标注工具](docs/BULK_LABELING.md) 生成描述与标签清单。工具不会绕过生产环境的上传校验和内容审核。
 
-AI 制作页面当前只提供安全的扩展框架，尚未启用真实模型。模型元数据、服务端适配器、次数和密钥边界见 [AI 生图接入文档](docs/AI_IMAGE_GENERATION.md)。
-
 ## License
 
 [MIT](LICENSE)
