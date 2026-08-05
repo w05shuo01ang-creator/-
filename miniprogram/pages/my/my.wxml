@@ -4,7 +4,6 @@
   </view>
 
   <view class="head-actions">
-    <button class="ai-button" bindtap="openAiCreate" disabled="{{batchUploading}}">AI制作</button>
     <button class="upload-button" bindtap="showUpload" disabled="{{batchUploading}}">＋ 上传</button>
   </view>
 

@@ -179,10 +179,6 @@ Page({
     this.filterItems()
   },
 
-  openAiCreate() {
-    wx.navigateTo({ url: '/pages/ai-create/ai-create' })
-  },
-
   showUpload() {
     this.setData({
       showUpload: true,

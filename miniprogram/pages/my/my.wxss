@@ -13,16 +13,12 @@
 }
 
 .head-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12rpx;
   padding: 0 30rpx 28rpx;
   border-bottom: 1rpx solid #e6e9ee;
   background: #f8faf9;
 }
 
-.upload-button,
-.ai-button {
+.upload-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,12 +34,6 @@
 
 .upload-button {
   background: #165dff;
-  color: #ffffff;
-}
-
-.ai-button {
-  border: 1rpx solid #18202a;
-  background: #18202a;
   color: #ffffff;
 }
 
